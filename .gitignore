@@ -1,0 +1,14 @@
+# Dataset (11 GB) — download from https://doi.org/10.5281/zenodo.21653081
+# and unpack with `python3 scripts/extract.py`
+data/
+
+# Generated artifacts — all regenerable, see README Quick start.
+# derived/predictions alone is ~40 MB of machine-written JSON.
+derived/
+
+__pycache__/
+*.pyc
+.DS_Store
+
+# local Claude Code settings
+.claude/settings.local.json

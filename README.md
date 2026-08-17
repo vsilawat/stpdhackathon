@@ -1,0 +1,134 @@
+# CAM process-plan prediction from CAD — MachinePlan-10K
+
+Predicts a CNC machining plan (operation sequence, tool selection, timing) from
+a CAD part file. Scope: 2.5-axis planar milling.
+
+Dataset: [MachinePlan-10K](https://doi.org/10.5281/zenodo.21653081) —
+10,000 parts, 91,702 machining operations, generated in Siemens NX.
+
+## Quick start
+
+```bash
+python3 scripts/extract.py                    # unpack the dataset (~6.4 GB)
+python3 scripts/analyze.py                    # build derived/operations.csv, parts.csv
+python3 scripts/tool_library.py               # build derived/tools.csv, op_details.csv
+python3 scripts/baseline.py fit               # train the rule-based baseline
+python3 scripts/baseline.py submit derived/predictions   # predict all 10,000 parts
+python3 scripts/evaluate.py                   # score on held-out parts
+```
+
+No third-party dependencies — standard library only. Runs in ~20 s for all
+10,000 parts.
+
+## Approach
+
+The dataset's labels come from NX's deterministic knowledge base, so much of the
+pipeline is a *rule engine*, not a learning problem. The baseline reproduces the
+rules we confirmed exactly and falls back on learned priors only where geometry
+extraction is still unsolved.
+
+**Confirmed exact (reimplemented directly):**
+
+| fact | evidence |
+|---|---|
+| chamfer features == non-axis-aligned planar faces | 1500 / 1500 parts, zero deviation |
+| every chamfer → one `AREA_MILL` with chamfer mill `UGT0205_001` | 20,067 / 20,067 operations |
+| holes == closed (360°) cylindrical faces | matches G-code drill positions in 84.7% of parts |
+| hole diameter == diameter of the tool that cut it | median error 0.000 mm |
+| operation name → tool class `(Type, SubType)` | 29 / 29 operations, 100% |
+| tool is determined by NX's recorded tool query | H(tool \| query) = 0.13 bits; 96.7% unique |
+
+**Recovered by aligning labels to geometry:**
+
+- Each drilling / cylinder-milling step is matched to the *specific hole it
+  cuts*, using the X/Y positions in its G-code. This yields true per-hole
+  operation chains instead of guessing from diameter.
+- Pockets, slots and notches are found by two complementary detectors:
+  **corner-fillet clusters** (same radius, height, depth) and **floor faces**
+  (a horizontal face that is not the outermost on its side is the bottom of
+  something cut into the part). Fillets alone miss through-slots, which are
+  open at both ends; floors alone over-count, because blind holes have flat
+  bottoms too. Combined, feature count is exact on **85.0%** of parts and
+  within one on **99.9%**.
+- The **number of rounded corners identifies the feature shape**, which is
+  what selects the operation: 1 → corner notch (73%), 2 → slot open at one
+  end (68%), 3 → open pocket (71%), 4 → enclosed pocket (78%). The fillet
+  radius is also the endmill radius, which fixes the tool.
+
+**Learned prior (the remaining weak link):**
+
+- `(diameter, through/blind, depth band) → operation chain`, with back-off to
+  less specific keys for unseen combinations.
+
+## Results (2,000 held-out parts)
+
+| metric | score |
+|---|---|
+| chamfer step count exactly right | **100.0%** |
+| chamfer contour steps F1 | **100.0%** |
+| step F1 (right operations, order-free) | **85.1%** |
+| pocket/slot/notch steps F1 | **85.2%** |
+| tool F1 | 70.0% |
+| drilling steps F1 | 63.6% |
+| milled-hole steps F1 | 30.3% |
+| sequence similarity | 53.4% |
+| whole plan exactly right | 18.4% |
+
+Mean absolute step-count error: **0.87** operations (median 0, p90 0).
+
+Progress on step F1: 54.7% → 67.3% (G-code hole alignment) → 75.2%
+(fillet clustering) → 76.2% (floor-face detection) → **85.1%**
+(corner count as a shape discriminator).
+
+## Where the remaining error is
+
+1. **Tool F1 (70.2%) lags step F1 (85.1%), and this is largely a hard limit.**
+   Of the steps where we name the operation correctly, 78.7% also get the
+   right tool. We tried re-deriving the tool from the feature's measured
+   dimensions instead of memorising it, and it did *not* help
+   (66.5%; the hybrid that only re-derives on a fallback recovers 70.2%).
+
+   The reason: NX's tool query gates on the hole diameter *before* the cut,
+   not the final one. For enlarging operations the query's lower diameter
+   bound matches a tool used earlier on the same part in 28.7% of cases —
+   it is reading an **in-process state that the finished CAD model does not
+   contain**. Residual uncertainty is H(tool | operation, hole diameter)
+   = 0.93 bits, and adding position-in-chain only reduces it to 0.86.
+
+   Copying a coherent tool *sequence* from a matched training example beats
+   predicting tools independently, because the sequence implicitly encodes
+   those intermediate states. Further gains here most likely require
+   predicting the in-process workpiece, not a better tool rule.
+2. **Milled holes (`CylinderMilling`) sit at 30.3%** — only 3.8% of steps, so
+   low priority, but they are currently the worst-served category.
+3. **Drilling chains at 63.6%.** Holes of the same diameter and depth still
+   receive different chains in the source data.
+4. **Drill-block vs mill-block order is near-random** (56 / 44 split in the
+   data), which caps sequence similarity regardless of everything else. Not
+   worth optimising.
+
+## Repo layout
+
+```
+scripts/step_parse.py       dependency-free STEP AP214 reader (planes + cylinders)
+scripts/extract.py          unpack the archive, skipping redundant ASCII STLs
+scripts/analyze.py          process-plan vocabularies and ordering structure
+scripts/tool_library.py     tool catalog + NX tool-selection queries
+scripts/tool_rules.py       decodes the selection rules; proves tool == f(query)
+scripts/cad_feature_link.py validates CAD geometry against the CAM labels
+scripts/baseline.py         the rule-based predictor (fit / predict / submit)
+scripts/evaluate.py         scoring
+derived/                    generated CSVs, model, predictions
+```
+
+## Known data issues
+
+- ~2% of operation transitions show in-process workpiece volume *increasing*
+  slightly (max 471 mm³ against ~1.1 × 10⁷ mm³ parts). This is STL tessellation
+  noise, not corrupt data — clamp to zero if using volume deltas as a target.
+- 9 of the 29 operation types occur fewer than 15 times in the whole dataset
+  and are effectively unlearnable.
+- Part IDs run to `featured_part_11416` with gaps; there are exactly 10,000
+  folders. Do not assume ID == index.
+- `*_text.stl.txt` files are ASCII duplicates of the binary `.stl` meshes
+  (~28 GB of the 35 GB uncompressed) and can be skipped entirely.
