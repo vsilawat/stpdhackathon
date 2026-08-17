@@ -13,7 +13,7 @@ import json, math, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from step_parse import parse
 from baseline import (ROOT, DER, load_ops, load_model, milled_features,
-                      fillet_clusters)
+                      fillet_clusters, build_plan, plan_composition)
 
 # Ranked by single-feature AUC on the training split. `min_hole_depth` --
 # the depth of the SHALLOWEST hole -- is by far the strongest single signal
@@ -24,6 +24,8 @@ FEATURES = [
     "deepest_is_hole", "max_feat_depth_over_h", "n_sunk", "n_holes",
     "max_feat_depth", "n_feats", "n_fillet", "n_flooronly", "n_cham",
     "max_hole_dia", "max_feat_dia", "hole_frac", "log_vol", "part_height",
+    # composition of the predicted (unordered) plan -- known before ordering
+    "n_drill_ops", "n_mill_ops", "drill_op_frac", "n_ops",
 ]
 
 
@@ -211,6 +213,9 @@ def fit_gbm(X, y, rounds=180, lr=0.12, depth=3):
 
 
 def predict_drill_first(clf, feats):
+    if clf.get("kind") == "ensemble":
+        ps = [predict_drill_first(m, feats) for m in clf["members"]]
+        return sum(ps) / len(ps)
     if clf.get("kind") == "gbm":
         x = [feats[k] for k in clf["features"]]
         bins = _to_bins(x, clf["edges"])
@@ -242,6 +247,7 @@ def main():
             except Exception:
                 continue
             fe = extract(p)
+            fe.update(plan_composition(build_plan(p, model), model))
             X.append([fe[k] for k in FEATURES])
             y.append(1 if kinds[0] == "d" else 0)
             pids.append(pid)
@@ -259,15 +265,54 @@ def main():
                    if (predict_drill_first(c, dict(zip(FEATURES, x))) >= 0.5) == t) \
             / len(yv)
 
+    # Select hyperparameters on an inner split of TRAIN, never on val, so the
+    # reported val accuracy stays an honest estimate.
+    cut = int(0.8 * len(Xtr))
+    Xa, ya, Xb, yb = Xtr[:cut], ytr[:cut], Xtr[cut:], ytr[cut:]
+
+    def dev_acc(c):
+        return sum(1 for x, t in zip(Xb, yb)
+                   if (predict_drill_first(c, dict(zip(FEATURES, x))) >= 0.5) == t) \
+            / len(yb)
+
+    grid = [(180, 0.12, 3), (400, 0.06, 3), (400, 0.06, 4),
+            (700, 0.04, 4), (400, 0.10, 5), (900, 0.03, 5)]
+    print("  tuning on inner split:")
+    best_cfg, best_dev = None, -1
+    dev_scores = []
+    for rounds, lr, depth in grid:
+        c = fit_gbm(Xa, ya, rounds=rounds, lr=lr, depth=depth)
+        a = dev_acc(c)
+        dev_scores.append(((rounds, lr, depth), a))
+        print(f"    rounds={rounds:4d} lr={lr:.2f} depth={depth}  dev {100*a:.1f}%")
+        if a > best_dev:
+            best_cfg, best_dev = (rounds, lr, depth), a
+    print(f"  -> best config {best_cfg} (dev {100*best_dev:.1f}%)")
+
+    # Ensemble the top configs by dev score -- averaging decorrelated models
+    # is a cheap and reliable way to buy the last point of accuracy.
+    ranked = sorted(dev_scores, key=lambda kv: -kv[1])[:3]
+    members = [fit_gbm(Xtr, ytr, rounds=r, lr=l, depth=d)
+               for (r, l, d), _ in ranked]
     lin = fit_logistic(Xtr, ytr)
-    gbm = fit_gbm(Xtr, ytr)
+    gbm = members[0]
+    ens = {"kind": "ensemble", "members": members + [lin],
+           "features": FEATURES}
+    ens_gbm_only = {"kind": "ensemble", "members": members,
+                    "features": FEATURES}
+
     a_lin, a_gbm = acc_of(lin), acc_of(gbm)
-    print(f"  val mixed parts  : {len(Xv):,}")
+    a_ens, a_eg = acc_of(ens), acc_of(ens_gbm_only)
+    print(f"\n  val mixed parts  : {len(Xv):,}")
     print(f"  majority baseline: {100*base:.1f}%")
     print(f"  logistic         : {100*a_lin:.1f}%")
-    print(f"  gradient boosting: {100*a_gbm:.1f}%")
-    clf, acc = (gbm, a_gbm) if a_gbm > a_lin else (lin, a_lin)
-    print(f"  -> keeping {'gradient boosting' if clf is gbm else 'logistic'}")
+    print(f"  best single gbm  : {100*a_gbm:.1f}%")
+    print(f"  ensemble (gbm x3): {100*a_eg:.1f}%")
+    print(f"  ensemble + linear: {100*a_ens:.1f}%")
+    cands = [(a_gbm, gbm, "single gbm"), (a_eg, ens_gbm_only, "gbm ensemble"),
+             (a_ens, ens, "gbm+linear ensemble"), (a_lin, lin, "logistic")]
+    acc, clf, label = max(cands, key=lambda x: x[0])
+    print(f"  -> keeping {label}")
 
     order = sorted(zip(FEATURES, lin["w"]), key=lambda kv: -abs(kv[1]))
     print("\n  strongest linear weights (positive = drill first):")

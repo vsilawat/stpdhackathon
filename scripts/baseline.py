@@ -203,23 +203,31 @@ def _edit(a, b):
     return prev[-1]
 
 
-def representative(counter):
-    """Pick the chain minimising expected edit distance to the observed ones.
+# The rubric scores sequences on BOTH edit distance and F1, 10 points each.
+# The pure medoid minimises edit distance but runs ~5% short on operation
+# count, which costs F1. CHAIN_ALPHA penalises deviation from the expected
+# length, trading a little edit distance for better counts.
+CHAIN_ALPHA = float(os.environ.get("CHAIN_ALPHA", "1.0"))
 
-    The rubric scores sequences by normalised Levenshtein distance, so the
-    medoid is the right point estimate. The plain mode is biased toward short
-    chains -- short variants are individually more frequent -- which made us
-    systematically under-predict the number of operations.
+
+def representative(counter, alpha=None):
+    """Pick a representative chain for a feature.
+
+    Minimises expected edit distance to the observed chains (the medoid),
+    plus `alpha` times the deviation from the expected chain length.
     """
+    alpha = CHAIN_ALPHA if alpha is None else alpha
     items = counter.most_common()
     if len(items) == 1:
         return items[0][0]
     if len(items) > 24:                      # keep the medoid search cheap
         items = items[:24]
     total = sum(c for _, c in items)
+    exp_len = sum(c * len(ch) for ch, c in items) / total
     best, best_cost = None, None
     for cand, _ in items:
         cost = sum(c * _edit(cand, other) for other, c in items) / total
+        cost += alpha * abs(len(cand) - exp_len)
         if best_cost is None or cost < best_cost:
             best, best_cost = cand, cost
     return best
@@ -474,12 +482,13 @@ def resolve_tool(model, name, feat_dia, fallback):
     return model["op_tool_any"].get(name, fallback)
 
 
-def predict(part_id, model=None, step_path=None):
-    """Return an ordered list of {name, type, tool} for one part."""
-    model = model or load_model()
-    step_path = step_path or os.path.join(ROOT, part_id, part_id + ".stp")
-    p = parse(step_path)
+def build_plan(p, model):
+    """Unordered set of operations implied by a part's geometry.
 
+    Split out from predict() so the block-order model can use the plan's
+    composition as a feature without a circular dependency: composition is
+    known before the ordering decision is made.
+    """
     plan = []
 
     # --- holes: one chain per closed cylinder (confirmed = one hole) --------
@@ -537,6 +546,25 @@ def predict(part_id, model=None, step_path=None):
             chain = p1.get(nc)
         plan += [(n, t, d, exact) for n, t in (chain or p0 or [])]
 
+    return plan
+
+
+def plan_composition(plan, model):
+    """Counts of drilling vs milling work in an unordered plan."""
+    nd = sum(1 for n, _t, _d, _e in plan if model["is_drill"].get(n))
+    nm = len(plan) - nd
+    return {"n_drill_ops": float(nd), "n_mill_ops": float(nm),
+            "drill_op_frac": nd / max(1, nd + nm),
+            "n_ops": float(len(plan))}
+
+
+def predict(part_id, model=None, step_path=None):
+    """Return an ordered list of {name, type, tool} for one part."""
+    model = model or load_model()
+    step_path = step_path or os.path.join(ROOT, part_id, part_id + ".stp")
+    p = parse(step_path)
+    plan = build_plan(p, model)
+
     # --- sequence: one method block then the other, ordered by order group --
     # Which block comes first is close to a coin flip in the data (58/42), but
     # is predictable from geometry at ~79% -- worth up to 4 rubric points.
@@ -544,8 +572,9 @@ def predict(part_id, model=None, step_path=None):
     if model.get("block_order"):
         from block_order import extract, predict_drill_first
         try:
-            drill_first = predict_drill_first(
-                model["block_order"], extract(p)) >= 0.5
+            fe = extract(p)
+            fe.update(plan_composition(plan, model))
+            drill_first = predict_drill_first(model["block_order"], fe) >= 0.5
         except Exception:
             drill_first = True
 

@@ -34,15 +34,19 @@ Both exports are checked with the organizers' own `validate_submission.py`
 
 | metric | value | points |
 |---|---|---|
-| mean normalized Levenshtein | 0.2112 | 6/10 |
-| mean F1 | 0.9314 | 8/10 |
+| mean normalized Levenshtein | 0.2040 | 6/10 |
+| mean F1 | 0.9321 | 8/10 |
 
-Averaging per-part points instead of banding the mean gives 15.63/20; the
+Averaging per-part points instead of banding the mean gives **15.76/20**; the
 rubric does not say which aggregation it uses.
+
+The Levenshtein band boundary is 0.20 and we finish at 0.2040 — close, but on
+the wrong side. Perfect block ordering would reach 0.1376, so the headroom
+exists; we captured about 70% of it and the last stretch did not come.
 
 ### Hard track: tool selection
 
-Tool type correct at the same position: **63.4%** (~10.1/20). When the type is
+Tool type correct at the same position: **64.4%** (~10.2/20). When the type is
 right the diameter is essentially exact — **median relative error 0.00%** — so
 tool *knowledge* is solved and the score is limited by sequence alignment, not
 by tool choice.
@@ -66,10 +70,15 @@ Progress from this one classifier:
 | logistic, 14 features (78.8%) | 0.250 | — |
 | + strong features (86.3%) | 0.222 | 61.6% |
 | + gradient boosting (87.8%) | 0.214 | 62.7% |
-| + medoid chain selection | **0.211** | **63.4%** |
+| + medoid chain selection | 0.211 | 63.4% |
+| + tuned + plan-composition features + ensemble (89.2%) | **0.204** | **64.4%** |
 
-Perfect block ordering would reach 0.152, so roughly a third of the original
-gap remains.
+Perfect block ordering would reach 0.1376, so roughly 30% of the original gap
+remains.
+
+`CHAIN_ALPHA` (default 1.0) trades a little edit distance for better operation
+counts: the pure medoid minimises edit distance but runs ~5% short on chain
+length, which costs F1. The rubric weights both equally.
 
 **Medoid chain selection**: when several operation chains were seen for the
 same feature, we now pick the one minimising expected edit distance rather than
