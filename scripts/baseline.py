@@ -193,6 +193,38 @@ def split_ids(all_ids, val_frac=0.2):
 # --------------------------------------------------------------------------
 # fit
 # --------------------------------------------------------------------------
+def _edit(a, b):
+    prev = list(range(len(b) + 1))
+    for i, x in enumerate(a, 1):
+        cur = [i]
+        for j, y in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (x != y)))
+        prev = cur
+    return prev[-1]
+
+
+def representative(counter):
+    """Pick the chain minimising expected edit distance to the observed ones.
+
+    The rubric scores sequences by normalised Levenshtein distance, so the
+    medoid is the right point estimate. The plain mode is biased toward short
+    chains -- short variants are individually more frequent -- which made us
+    systematically under-predict the number of operations.
+    """
+    items = counter.most_common()
+    if len(items) == 1:
+        return items[0][0]
+    if len(items) > 24:                      # keep the medoid search cheap
+        items = items[:24]
+    total = sum(c for _, c in items)
+    best, best_cost = None, None
+    for cand, _ in items:
+        cost = sum(c * _edit(cand, other) for other, c in items) / total
+        if best_cost is None or cost < best_cost:
+            best, best_cost = cand, cost
+    return best
+
+
 def _merge(keyed):
     """Merge a keyed lookup down to a single Counter."""
     out = collections.Counter()
@@ -343,28 +375,28 @@ def fit():
             l1[d][ch] += n
 
     model = {
-        "hole_l3": {f"{d}|{int(th)}|{db}": list(v.most_common(1)[0][0])
+        "hole_l3": {f"{d}|{int(th)}|{db}": list(representative(v))
                     for (d, th, db), v in l3.items()},
-        "hole_l2": {f"{d}|{int(th)}": list(v.most_common(1)[0][0])
+        "hole_l2": {f"{d}|{int(th)}": list(representative(v))
                     for (d, th), v in l2.items()},
-        "hole_l1": {f"{d}": list(v.most_common(1)[0][0])
+        "hole_l1": {f"{d}": list(representative(v))
                     for d, v in l1.items()},
-        "chamfer_chain": list(chamfer_chain.most_common(1)[0][0]),
-        "pocket_l3": {f"{n}|{d}|{db}": list(v.most_common(1)[0][0])
+        "chamfer_chain": list(representative(chamfer_chain)),
+        "pocket_l3": {f"{n}|{d}|{db}": list(representative(v))
                       for (n, d, db), v in pocket_chain.items()},
-        "pocket_l2": {f"{n}|{d}": list(v.most_common(1)[0][0])
+        "pocket_l2": {f"{n}|{d}": list(representative(v))
                       for (n, d), v in _regroup(pocket_chain, (0, 1)).items()},
-        "pocket_l1": {f"{n}": list(v.most_common(1)[0][0])
+        "pocket_l1": {f"{n}": list(representative(v))
                       for (n,), v in _regroup(pocket_chain, (0,)).items()},
-        "pocket_l0": (list(_merge(pocket_chain).most_common(1)[0][0])
+        "pocket_l0": (list(representative(_merge(pocket_chain)))
                       if pocket_chain else []),
         "op_tool": {f"{n}|{d}": v.most_common(1)[0][0]
                     for (n, d), v in op_tool.items()},
         "op_tool_any": {n: v.most_common(1)[0][0]
                         for n, v in op_tool_any.items()},
-        "slot_l1": {str(db): list(v.most_common(1)[0][0])
+        "slot_l1": {str(db): list(representative(v))
                     for db, v in slot_chain.items()},
-        "slot_l0": (list(_merge(slot_chain).most_common(1)[0][0])
+        "slot_l0": (list(representative(_merge(slot_chain)))
                     if slot_chain else []),
         "op_type": op_type,
         "is_drill": is_drill,

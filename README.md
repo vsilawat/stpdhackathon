@@ -34,28 +34,47 @@ Both exports are checked with the organizers' own `validate_submission.py`
 
 | metric | value | points |
 |---|---|---|
-| mean normalized Levenshtein | 0.2496 | 6/10 |
-| mean F1 | 0.9266 | 8/10 |
+| mean normalized Levenshtein | 0.2112 | 6/10 |
+| mean F1 | 0.9314 | 8/10 |
+
+Averaging per-part points instead of banding the mean gives 15.63/20; the
+rubric does not say which aggregation it uses.
 
 ### Hard track: tool selection
 
-Tool type correct at the same position: 58.4%. When the type is right the
-diameter is essentially exact — **median relative error 0.00%**, 73.8% within
-2% — so tool *knowledge* is solved and the score is limited by sequence
-alignment, not by tool choice.
+Tool type correct at the same position: **63.4%** (~10.1/20). When the type is
+right the diameter is essentially exact — **median relative error 0.00%** — so
+tool *knowledge* is solved and the score is limited by sequence alignment, not
+by tool choice.
 
 ### The shared bottleneck: block order
 
 Both tracks are dominated by one decision: does the plan start with drilling or
 with milling? NX keeps each kind in a contiguous block (93.3% of parts) but the
-order between them is near a coin flip (58/42). A logistic regression on
-geometry predicts it at **78.8%** (vs 57.5% majority baseline), driven mainly by
-hole depth and diameter. Getting it perfect would be worth roughly:
+order between them is near a coin flip (58/42). Gradient-boosted stumps on
+geometric features predict it at **87.8%** (57.5% majority baseline).
 
-- Easy: Levenshtein 0.250 -> 0.152, i.e. **+2 to +4 points**
-- Hard: tool-type accuracy 58.4% -> 67.8%, i.e. **+9.3 points of accuracy**
+The decisive feature was `min_hole_depth` — the depth of the *shallowest* hole
+— with a single-feature AUC of 0.88. Max hole depth, which we tried first, is
+far weaker at 0.69.
 
-This is the highest-value remaining work on both tracks.
+Progress from this one classifier:
+
+| | Levenshtein | Hard tool type |
+|---|---|---|
+| always drill-first | 0.352 | 58.4% |
+| logistic, 14 features (78.8%) | 0.250 | — |
+| + strong features (86.3%) | 0.222 | 61.6% |
+| + gradient boosting (87.8%) | 0.214 | 62.7% |
+| + medoid chain selection | **0.211** | **63.4%** |
+
+Perfect block ordering would reach 0.152, so roughly a third of the original
+gap remains.
+
+**Medoid chain selection**: when several operation chains were seen for the
+same feature, we now pick the one minimising expected edit distance rather than
+the most frequent one. The plain mode is biased toward short chains, which made
+us systematically under-predict operation counts.
 
 ## Quick start
 
