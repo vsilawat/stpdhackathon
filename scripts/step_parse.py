@@ -179,6 +179,7 @@ def parse(path):
             # Axial extent = spread of the bounding circles' centres measured
             # along the cylinder axis. For a hole this is its depth.
             depth = None
+            lo_hi = None
             if ax:
                 i = max(range(3), key=lambda k: abs(ax[k]))
                 cs = []
@@ -189,11 +190,14 @@ def parse(path):
                             cs.append(o2[i])
                 if len(cs) >= 2:
                     depth = max(cs) - min(cs)
+                    lo_hi = (min(cs), max(cs))
             part.faces.append({"kind": "cylinder", "radius": float(sa[2]),
                                "origin": org, "axis": ax, "id": eid,
                                "n_circle_edges": len(circles),
                                "n_full_circles": n_full,
                                "depth": depth,
+                               # extent along the cylinder axis: (bottom, top)
+                               "extent": lo_hi,
                                "closed": n_full > 0})
         elif stype == "PLANE":
             org, ax = placement(ref(sa[1]))

@@ -6,6 +6,57 @@ a CAD part file. Scope: 2.5-axis planar milling.
 Dataset: [MachinePlan-10K](https://doi.org/10.5281/zenodo.21653081) —
 10,000 parts, 91,702 machining operations, generated in Siemens NX.
 
+## Submission (organizers' format)
+
+The competition splits 100 points across three tracks. We target Easy and Hard;
+Medium is deliberately skipped (see below).
+
+| Track | Points | Output | Status |
+|---|---|---|---|
+| Easy | 20 | operation sequence (`<part>_sequence.json`) | **14/20**, 10,000/10,000 files valid |
+| Medium | 35 | IPW mesh per operation (`.stl`) | **not attempted** |
+| Hard | 45 | tool type + diameter (20) and G-code toolpath (25) | tools **~9.3/20**, G-code not attempted |
+
+Medium was skipped by choice: it is scored by geometric overlap with a floor at
+IoU 0.90, below which it scores zero, so a partial attempt is worth nothing.
+
+```bash
+python3 scripts/export_easy.py      # -> submission/easy/<part>_sequence.json
+python3 scripts/export_hard.py      # -> submission/hard/<part>_tools.json
+python3 scripts/score_official.py   # validates all files + Easy rubric score
+python3 scripts/score_hard.py       # Hard tool-selection rubric score
+```
+
+Both exports are checked with the organizers' own `validate_submission.py`
+(imported directly, run over all 10,000 files): **20,000/20,000 valid**.
+
+### Easy track: 14/20
+
+| metric | value | points |
+|---|---|---|
+| mean normalized Levenshtein | 0.2496 | 6/10 |
+| mean F1 | 0.9266 | 8/10 |
+
+### Hard track: tool selection
+
+Tool type correct at the same position: 58.4%. When the type is right the
+diameter is essentially exact — **median relative error 0.00%**, 73.8% within
+2% — so tool *knowledge* is solved and the score is limited by sequence
+alignment, not by tool choice.
+
+### The shared bottleneck: block order
+
+Both tracks are dominated by one decision: does the plan start with drilling or
+with milling? NX keeps each kind in a contiguous block (93.3% of parts) but the
+order between them is near a coin flip (58/42). A logistic regression on
+geometry predicts it at **78.8%** (vs 57.5% majority baseline), driven mainly by
+hole depth and diameter. Getting it perfect would be worth roughly:
+
+- Easy: Levenshtein 0.250 -> 0.152, i.e. **+2 to +4 points**
+- Hard: tool-type accuracy 58.4% -> 67.8%, i.e. **+9.3 points of accuracy**
+
+This is the highest-value remaining work on both tracks.
+
 ## Quick start
 
 ```bash
