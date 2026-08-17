@@ -88,8 +88,12 @@ Worth recording, because they're the interesting bits:
 - We assumed "open pockets" were our blind spot. They weren't: only 29 exist
   in the whole dataset. The real gap was ordinary rectangular **slots**, which
   are invisible to the corner trick because they have no corners at all.
-- We spent a chunk of today trying to improve tool selection and **it didn't
+- We spent a chunk of time trying to improve tool selection and **it didn't
   work** — see below. That's a genuine limit, not a bug.
+- We twice declared something "not worth pursuing" and were wrong once. Block
+  ordering was written off as random; testing it properly turned it into one of
+  our biggest gains. The other call — skipping the 3D-mesh tracks — we checked
+  with hard numbers before committing.
 
 ## What's still missing
 
@@ -100,9 +104,15 @@ partway through the job* — a state that simply doesn't exist in the finished
 3D model we're given. It's not that our method is weak; the information isn't
 in the input.
 
-**Ordering (53%) is capped too.** Whether the machine drills first or mills
-first is close to a coin flip in the source data — 56/44 — with nothing in the
-part file predicting which. Not worth more effort.
+**Ordering is our nearest miss.** The scoring uses bands, and we finished at
+0.204 where 0.200 would have earned 2 more points. Frustrating, but honest.
+
+Worth flagging: earlier we concluded ordering was unpredictable — whether the
+machine drills first or mills first looked like a coin flip (58/42). **That was
+wrong, and we only found out by testing it properly.** It turns out to be
+predictable at 89% from the part's geometry, and the single most useful clue is
+the depth of the *shallowest* hole. Fixing this cut our ordering error by 40%
+and improved the tool track at the same time.
 
 **We deliberately skipped two tracks.** Medium (35 points) and the G-code half
 of Hard (25 points) are both scored on 3D volume overlap with unforgiving
