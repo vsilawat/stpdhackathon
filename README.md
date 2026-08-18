@@ -189,16 +189,59 @@ Progress on step F1: 54.7% → 67.3% (G-code hole alignment) → 75.2%
 ## Repo layout
 
 ```
-scripts/step_parse.py       dependency-free STEP AP214 reader (planes + cylinders)
-scripts/extract.py          unpack the archive, skipping redundant ASCII STLs
-scripts/analyze.py          process-plan vocabularies and ordering structure
-scripts/tool_library.py     tool catalog + NX tool-selection queries
-scripts/tool_rules.py       decodes the selection rules; proves tool == f(query)
-scripts/cad_feature_link.py validates CAD geometry against the CAM labels
-scripts/baseline.py         the rule-based predictor (fit / predict / submit)
-scripts/evaluate.py         scoring
-derived/                    generated CSVs, model, predictions
+.
+├── README.md                  this file — approach, evidence, results
+├── SUMMARY_FOR_TEAM.md        non-technical summary for teammates
+├── PRESENTATION.md            Round 1 slide outline + timed 3-min script
+│
+├── scripts/                   the pipeline (stdlib only)  — see scripts/README.md
+│   ├── step_parse.py            dependency-free STEP AP214 reader
+│   ├── extract.py               unpack the archive, skipping ASCII-STL dupes
+│   ├── analyze.py               process-plan vocabularies and ordering structure
+│   ├── tool_library.py          tool catalog + NX tool-selection queries
+│   ├── tool_rules.py            decodes the queries; tool == f(query)
+│   ├── cad_feature_link.py      validates CAD geometry against the CAM labels
+│   ├── baseline.py              the predictor (fit / predict / submit)
+│   ├── block_order.py           drill-first vs mill-first classifier
+│   ├── export_easy.py           -> submission/easy/
+│   ├── export_hard.py           -> submission/hard/
+│   ├── score_official.py        organizers' validator + Easy rubric score
+│   ├── score_hard.py            Hard tool-selection rubric score
+│   ├── evaluate.py              internal fine-grained metrics
+│   └── check_predictions.py     self-consistency checks (mutation-tested)
+│
+├── derived/                   generated tables and models — see derived/README.md
+│   ├── operations.csv           91,702 operations
+│   ├── op_details.csv           operation cards incl. tool-selection queries
+│   ├── tools.csv                the 431-tool catalog
+│   ├── parts.csv                per-part summary
+│   ├── baseline_model.json      learned lookups + train/val split
+│   ├── block_order.json         the ordering classifier
+│   ├── o1o2_map.json            NX operation name -> (o1, o2)
+│   └── predictions/             10,000 plans, internal format
+│
+├── submission/                the deliverable — see submission/README.md
+│   ├── easy/                    10,000 x <part>_sequence.json
+│   └── hard/                    10,000 x <part>_tools.json
+│
+├── data/                      NOT IN GIT (11 GB) — see data/README.md
+└── reference/                 NOT IN GIT — the organizers' repo, clone it:
 ```
+
+Two directories are not committed, for reasons other than preference:
+
+```bash
+# the dataset: 11 GB, beyond GitHub's limits (see data/README.md)
+python3 scripts/extract.py     # after downloading the Zenodo archive
+
+# the organizers' repo: not ours to redistribute, 21 MB of slide decks,
+# and it carries its own .git
+git clone https://github.com/athulcd/ASME-CIE-Student-Hackathon-2026-Problem-1.git reference
+```
+
+Everything else — scripts, generated tables, trained models, and all 20,000
+submission files — is committed, so the repository can be inspected and the
+submission reviewed without downloading anything.
 
 ## Known data issues
 
