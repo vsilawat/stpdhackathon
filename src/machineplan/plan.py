@@ -57,7 +57,7 @@ def pocket_feats(p: Pocket) -> list[float]:
     from .tooling import pocket_dia_feats
     return pocket_dia_feats(p)
 
-# op names are distinct per part (0/8539 GT parts repeat one) -> best distinct assignment
+# 31% of GT parts repeat a base kind -> per-pocket argmax, never force-distinct
 def pocket_names(ps: list[Pocket]) -> list[str]:
     if not ps: return []
     m = pocket_kind_model()
@@ -65,11 +65,7 @@ def pocket_names(ps: list[Pocket]) -> list[str]:
     import numpy as np
     P = m.predict_proba([pocket_feats(p) for p in ps])
     cls = list(m.classes_)
-    if len(ps) == 1 or len(ps) > len(cls): return [str(cls[int(np.argmax(row))]) for row in P]
-    from itertools import permutations
-    logp = np.log(P + 1e-9)
-    best = max(permutations(range(len(cls)), len(ps)), key=lambda pm: sum(logp[i][j] for i, j in enumerate(pm)))
-    return [str(cls[j]) for j in best]
+    return [str(cls[int(np.argmax(row))]) for row in P]
 
 def pocket_ops(found: Features) -> list[Op]:
     from . import tooling
@@ -229,7 +225,24 @@ def order_features(found: Features) -> list[float]:
             found.stock[0], found.stock[1], tz,
             min((p.depth for p in ps), default=0), sum(p.kind == "edge" for p in ps),
             min((h.bottom_z for h in hs), default=0),
-            sum(h.diameter * h.diameter * h.depth for h in hs) / 1000.0]
+            sum(h.diameter * h.diameter * h.depth for h in hs) / 1000.0,
+            *_floor_match_feats(hs, ps, tz)]
+
+def _floor_match_feats(hs, ps, tz: float) -> list[float]:
+    matched = []
+    for h in hs:
+        if h.mouth_z >= tz - 0.01: continue
+        m = [p for p in ps if abs(p.floor_z - h.mouth_z) < 0.05]
+        if m: matched.append((h, max(m, key=lambda p: p.area)))
+    return [len(matched), len(matched) / max(len(hs), 1),
+            sum(h.through for h, _ in matched), sum(not h.through for h, _ in matched),
+            max((h.diameter for h, _ in matched), default=0),
+            min((h.diameter for h, _ in matched), default=0),
+            sum(1 for h, _ in matched if h.diameter < 15),
+            max((p.depth for _, p in matched), default=0),
+            sum(p.area for _, p in matched),
+            sum(1 for h in hs if h.mouth_z < tz - 0.01) - len(matched),
+            len({round(p.floor_z, 1) for p in ps})]
 
 # model predicts the spot/twist block's placement relative to the mill block
 def predict_drilling_first(found: Features) -> bool:

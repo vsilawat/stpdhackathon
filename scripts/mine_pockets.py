@@ -21,9 +21,10 @@ def gt_ops() -> dict:
     if _GTOPS is None:
         _GTOPS = {}
         for r in csv.DictReader(open("derived/opdetails.csv")):
-            if r["op_name"] in POCKET_NAMES:
+            base = re.sub(r"_\d+$", "", r["op_name"])
+            if base in POCKET_NAMES:
                 _GTOPS.setdefault(r["part"], []).append(
-                    (int(r["op_index"]), r["op_name"], float(r["tool_diameter_mm"])))
+                    (int(r["op_index"]), base, float(r["tool_diameter_mm"])))
     return _GTOPS
 
 def max_inscribed(poly) -> float:
