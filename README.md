@@ -30,3 +30,8 @@ organizers' `validate_submission.py` with zero errors.
 An earlier standard-library baseline (Easy 0.204, tools 64.4%, Medium skipped)
 was superseded by this pipeline; its scripts remain under `scripts/` for
 provenance but are not part of the submission path.
+
+Note: four trained model pickles exceed GitHub's 100 MB file limit and are
+gitignored (`derived/chain_tree.pkl`, `chain_tree12.pkl`, `tool_dia_models.pkl`,
+`pocket_tool_model.pkl`). The committed `submission/` files were generated with
+them; to regenerate from scratch, retrain via the `scripts/train_*.py` scripts.
