@@ -242,6 +242,56 @@ Everything else — scripts, generated tables, trained models, and all 20,000
 submission files — is committed, so the repository can be inspected and the
 submission reviewed without downloading anything.
 
+## Positioning against the literature
+
+Machining feature recognition from B-rep is a mature field. The standard
+taxonomy splits it into four families: **graph-based**, **convex-hull
+decomposition**, **cell-based decomposition**, and **hint-based** methods.
+
+The canonical graph method is the **Attributed Adjacency Graph** (Joshi &
+Chang, *Computer-Aided Design*, 1988): nodes are faces, edges are shared
+edges labelled convex or concave, and a machining feature appears as a
+connected subgraph of concave-linked faces. Its known weakness is intersecting
+features. Modern learned variants (AAGNet, BrepMFR, UV-Net) put a graph neural
+network on the same representation.
+
+**Where our method sits.** Our corner-fillet counting is a *hint-based* method
+in that taxonomy: it keys on a manufacturing artefact (a round cutter cannot
+leave a sharp internal corner) rather than on graph topology. That makes it
+much cheaper than AAG — no adjacency graph, no convexity computation — and it
+recovers the feature *shape* directly from the fillet count. The trade-off is
+that it yields no feature *boundary*, which AAG does.
+
+**What AAG would buy us.** Pocket outlines, which are the blocking capability
+for both unattempted tracks. Our parser already stores per-face edge lists with
+curve identity, so adjacency is available; convexity from face normals is
+straightforward. Estimated 3-4 hours for the graph, but tessellation and mesh
+boolean operations on top of it are a further 1-2 days, which is why the
+tracks below stay unattempted.
+
+## Why Medium (35 pts) was not attempted — the measurement
+
+Across the whole dataset, machining removes only **4.48% of the stock volume**.
+Every in-process workpiece state is therefore within a few percent of every
+other one by volume, and IoU between nested solids is just a volume ratio.
+
+Submitting a single constant mesh for every operation state scores:
+
+| constant guess | mean IoU | rubric band |
+|---|---|---|
+| the finished part, every state | 0.9720 | 15/35 |
+| the stock block, every state | 0.9762 | 15/35 |
+| better of the two, per part | 0.9859 | 20/35 |
+
+So 15-20 points are reachable **without modelling anything**. We did not do
+this. It makes no use of the operation sequence, it would misrepresent the
+finished part as an in-process state, and rubric 3.2 penalises exactly this
+kind of solution. Recording the number because it is a real property of the
+metric and worth knowing, not because it is a strategy.
+
+A genuine IPW sequence needs pocket boundaries (see AAG above), a STEP
+tessellator, and mesh boolean subtraction — beyond the time available.
+
 ## Known data issues
 
 - ~2% of operation transitions show in-process workpiece volume *increasing*

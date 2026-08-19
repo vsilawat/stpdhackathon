@@ -125,6 +125,26 @@ Notably, 82% of all the metal removed is pockets and slots, and only 9% is
 drilling — so "do the easy half of the G-code first" would have scored zero.
 That measurement is why we stopped rather than starting it.
 
+## Is there a shortcut to the tracks we skipped?
+
+We checked, because 35 points is a lot to leave on the table.
+
+The 3D-shape track is scored by how closely our predicted shape-after-each-step
+matches the real one. It turns out machining only removes **4.5% of the metal
+block** — so every intermediate shape is nearly identical to every other one.
+Submitting the *same* shape for every step would score 15-20 of the 35 points
+without modelling anything at all.
+
+**We are not doing that.** It uses none of the actual sequence, it passes off
+the finished part as a work-in-progress state, and the rubric explicitly
+penalises this kind of thing. It is recorded in our notes as a quirk of the
+scoring, not as a plan.
+
+Doing it honestly needs one capability we do not have: the exact outline of
+each pocket. That is a known, solved problem in the literature (a 1988 method
+called the Attributed Adjacency Graph), but building it plus the 3D geometry
+work on top is several days, not one.
+
 ## Bottom line
 
 We have a complete, validated, submittable system with a safety margin before
