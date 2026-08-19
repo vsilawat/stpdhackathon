@@ -1,23 +1,10 @@
-# ---------------------------------------------------------------------------
-# Only genuinely un-pushable content is excluded. Everything else -- scripts,
-# generated tables, models, and the full submission -- is committed so the repo
-# reflects the real project layout.
-# ---------------------------------------------------------------------------
-
-# The dataset: 11 GB (a 5.2 GB zip plus 6.4 GB extracted). Far beyond GitHub's
-# limits. See data/README.md for how to obtain and unpack it.
-data/*
-!data/README.md
-
-# The organizers' repository, cloned for their validator and rubric. Not ours
-# to redistribute, it carries 21 MB of slide decks, and it has its own .git
-# (committing it would create a broken submodule reference). One clone command
-# restores it -- see the root README.
-reference/
-
+.venv/
 __pycache__/
 *.pyc
-.DS_Store
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
 
-# Local Claude Code settings (machine-specific)
-.claude/settings.local.json
+# dataset (5.2 GB zip, ~35 GB extracted)
+data/
+old/
