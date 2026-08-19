@@ -1,0 +1,51 @@
+from __future__ import annotations
+
+import csv
+import json
+import pickle
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+def load():
+    groups = defaultdict(list)
+    for r in csv.DictReader(open("derived/chains.csv")):
+        if r["group_prefix"].startswith(("STEP1HOLE", "STEP1POCKET")):
+            groups[r["part"]].append((float(r["final_diameter"]), r["chain"]))
+    feats = {r["part"]: r for r in map(json.loads, open("derived/features.jsonl"))}
+    X, y, parts = [], [], []
+    for p, rows in groups.items():
+        holes = list(feats[p]["holes"])
+        for fd, chain in rows:
+            if not holes: break
+            i = min(range(len(holes)), key=lambda k: abs(holes[k]["d"] - fd))
+            h = holes.pop(i)
+            if abs(h["d"] - fd) > 0.6: continue
+            X.append([h["d"], h["depth"], h["depth"] / h["d"], float(h["through"])])
+            y.append(chain); parts.append(p)
+    return np.array(X), np.array(y), parts
+
+def main() -> int:
+    X, y, parts = load()
+    idx = {p: i for i, p in enumerate(sorted(set(parts)))}
+    test = np.array([idx[p] % 5 == 4 for p in parts])
+    best = None
+    models = [DecisionTreeClassifier(max_depth=d, min_samples_leaf=3, random_state=0) for d in (12, 16)]
+    models.append(RandomForestClassifier(n_estimators=200, min_samples_leaf=2, random_state=0, n_jobs=-1))
+    for m in models:
+        m.fit(X[~test], y[~test])
+        acc = m.score(X[test], y[test])
+        print(f"{type(m).__name__}: holdout chain acc {acc:.4f}")
+        if best is None or acc > best[1]: best = (m, acc)
+    pickle.dump(best[0], open("derived/chain_tree.pkl", "wb"))
+    print(f"saved derived/chain_tree.pkl (n={len(y)}, acc={best[1]:.4f})")
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())

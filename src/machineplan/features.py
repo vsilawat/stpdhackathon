@@ -26,6 +26,7 @@ class Hole:
     depth: float
     through: bool
     bottom_z: float
+    mouth_z: float = 0.0
     faces: list[FaceId] = field(default_factory=list)
 
 @dataclass(slots=True)
@@ -114,7 +115,7 @@ def find_holes(part: Part, top_z: float, bottom_z: float) -> list[Hole]:
         low = min(f.bbox.zmin for f in faces)
         out.append(Hole(x=x, y=y, diameter=2 * radius, depth=top_z - low,
                         through=abs(low - bottom_z) < TOL, bottom_z=low,
-                        faces=[f.index for f in faces]))
+                        mouth_z=max(f.bbox.zmax for f in faces), faces=[f.index for f in faces]))
     return out
 
 def find_pockets(part: Part, top_z: float, hole_faces: set[FaceId] = frozenset()) -> list[Pocket]:

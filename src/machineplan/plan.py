@@ -68,15 +68,66 @@ def hole_chain(h: Hole) -> list[Op]:
     if d >= 32.0: ops.append(op("DRILL_TO_ENLARGE_BLIND_HOLE", d))
     return ops
 
+_MODEL: object = None
+def chain_model():
+    global _MODEL
+    if _MODEL is None:
+        import pickle
+        from pathlib import Path
+        p = Path(__file__).resolve().parents[2] / "derived/chain_tree.pkl"
+        _MODEL = pickle.load(p.open("rb")) if p.exists() else False
+    return _MODEL
+
+def hole_chains(found: Features) -> list[list[Op]]:
+    holes, model = found.holes, chain_model()
+    if not model or not holes: return [hole_chain(h) for h in holes]
+    import numpy as np
+    sx, sy, sz = found.stock
+    X = np.array([[h.diameter, h.depth, h.depth / h.diameter, float(h.through),
+                   sz, found.top_z - h.mouth_z, h.bottom_z,
+                   h.diameter % 1.0, float(abs(h.diameter - round(h.diameter)) < 0.01),
+                   min(h.x, sx - h.x, h.y, sy - h.y)] for h in holes])
+    out = []
+    for h, chain in zip(holes, model.predict(X), strict=True):
+        names = chain.split(">")
+        ops = [Op(n, feature=h, tool_diameter=12.0 if n == "SPOT_DRILL" else None) for n in names]
+        ops[-1].tool_diameter = 12.0 if ops[-1].name == "SPOT_DRILL" else h.diameter
+        out.append(ops)
+    return out
+
 def is_mill_op(o: Op) -> bool: return o.name in MILL_ORDER or o.name == "AREA_MILL"
 
-# mined: any blind hole -> drilling first; else milling first unless many pockets (91.9% holdout)
+_ORDER: object = None
+def order_model():
+    global _ORDER
+    if _ORDER is None:
+        import pickle
+        from pathlib import Path
+        p = Path(__file__).resolve().parents[2] / "derived/order_model.pkl"
+        _ORDER = pickle.load(p.open("rb")) if p.exists() else False
+    return _ORDER
+
+def order_features(found: Features) -> list[float]:
+    hs, ps, cs = found.holes, found.pockets, found.chamfers
+    tz = found.top_z
+    sub = [h for h in hs if h.mouth_z < tz - 0.01]
+    return [len(hs), len(ps), len(cs), sum(h.through for h in hs), sum(not h.through for h in hs),
+            max((h.diameter for h in hs), default=0), min((h.diameter for h in hs), default=0),
+            max((h.depth / h.diameter for h in hs), default=0),
+            max((p.depth for p in ps), default=0), sum(p.area for p in ps),
+            found.stock[2], found.stock[0] * found.stock[1],
+            len(sub), len(sub) / max(len(hs), 1),
+            sum(1 for h in hs if h.diameter >= 15), sum(1 for h in hs if h.depth / h.diameter >= 5)]
+
+# fallback rule: any blind hole -> drilling first (91.9% holdout); model is 92.2%
 def predict_drilling_first(found: Features) -> bool:
+    model = order_model()
+    if model: return not int(model.predict([order_features(found)])[0])
     return any(not h.through for h in found.holes) or (bool(found.holes) and len(found.pockets) > 6)
 
 def plan(found: Features, drilling_first: bool | None = None) -> list[Op]:
     if drilling_first is None: drilling_first = predict_drilling_first(found)
-    chains = [hole_chain(h) for h in found.holes]
+    chains = hole_chains(found)
     spots = [c[0] for c in chains if c and c[0].name == "SPOT_DRILL"]
     per_hole = [op for c in chains for op in (c[1:] if c and c[0].name == "SPOT_DRILL" else c)]
     drill = spots + [o for o in per_hole if not is_mill_op(o)]
@@ -88,7 +139,7 @@ def features_from_row(row: dict) -> Features:
     from .brep import Size
     found = Features(stock=Size(*row["stock"]), top_z=row["top_z"], bottom_z=row["bottom_z"])
     found.holes = [Hole(x=h["x"], y=h["y"], diameter=h["d"], depth=h["depth"], through=h["through"],
-                        bottom_z=h["bottom_z"]) for h in row["holes"]]
+                        bottom_z=h["bottom_z"], mouth_z=h.get("mouth_z", row["top_z"])) for h in row["holes"]]
     found.pockets = [Pocket(floor_z=p["floor_z"], depth=p["depth"], area=p["area"], kind=p["kind"],
                             open_sides=p["open_sides"], fillet_radius=p["fillet_radius"],
                             corners=p["corners"]) for p in row["pockets"]]

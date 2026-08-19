@@ -14,7 +14,7 @@ OUT = Path("derived/features.jsonl")
 
 def hole_row(h: features.Hole) -> dict:
     return {"x": h.x, "y": h.y, "d": h.diameter, "depth": h.depth,
-            "through": h.through, "bottom_z": h.bottom_z}
+            "through": h.through, "bottom_z": h.bottom_z, "mouth_z": h.mouth_z}
 
 def pocket_row(p: features.Pocket) -> dict:
     return {"floor_z": p.floor_z, "depth": p.depth, "area": p.area, "kind": p.kind,
