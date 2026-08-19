@@ -41,7 +41,9 @@ def chamfer_ops(found: Features) -> list[Op]:
     return [Op("AREA_MILL", feature=c, tool_type="chamfer_mill", tool_diameter=20.0, extra={"face": f})
             for c in found.chamfers for f in (c.faces or [None])]
 
-def pocket_ops(found: Features) -> list[Op]: return [Op(POCKET_OP[p.kind], feature=p) for p in found.pockets]
+def pocket_ops(found: Features) -> list[Op]:
+    return [Op(POCKET_OP[p.kind], feature=p, tool_type="end_mill",
+               tool_diameter=2 * (p.fillet_radius or 5.0)) for p in found.pockets]
 
 def hole_chain(h: Hole) -> list[Op]:
     """Mined chain rules (derived/chains.csv)."""
@@ -80,7 +82,10 @@ def chain_model():
 
 def hole_chains(found: Features) -> list[list[Op]]:
     holes, model = found.holes, chain_model()
-    if not model or not holes: return [hole_chain(h) for h in holes]
+    if not model or not holes:
+        out = [hole_chain(h) for h in holes]
+        for ops in out: assign_tools(ops, found)
+        return out
     import numpy as np
     sx, sy, sz = found.stock
     X = np.array([[h.diameter, h.depth, h.depth / h.diameter, float(h.through),
@@ -90,10 +95,21 @@ def hole_chains(found: Features) -> list[list[Op]]:
     out = []
     for h, chain in zip(holes, model.predict(X), strict=True):
         names = chain.split(">")
-        ops = [Op(n, feature=h, tool_diameter=12.0 if n == "SPOT_DRILL" else None) for n in names]
-        ops[-1].tool_diameter = 12.0 if ops[-1].name == "SPOT_DRILL" else h.diameter
+        ops = [Op(n, feature=h) for n in names]
         out.append(ops)
+    for ops in out: assign_tools(ops, found)
     return out
+
+def assign_tools(ops: list[Op], found: Features) -> None:
+    from . import tooling
+    for i, o in enumerate(ops):
+        o.tool_diameter = tooling.hole_tool_dia(o.name, o.feature, found, i, len(ops))
+        o.tool_type = tooling.tool_type(o.name)
+    for i, o in enumerate(ops[:-1]):
+        if o.name != "SPOT_DRILL": o.extra["pilot"] = True
+    pilots = [o for o in ops if o.name == "DRILL_BLIND_HOLE_INTO_CENTER"]
+    for o in ops:
+        if "GUN_DRILL" in o.name and pilots: o.extra["pilot_dia"] = pilots[0].tool_diameter
 
 def is_mill_op(o: Op) -> bool: return o.name in MILL_ORDER or o.name == "AREA_MILL"
 

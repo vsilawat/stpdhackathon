@@ -21,13 +21,18 @@ def load():
     feats = {r["part"]: r for r in map(json.loads, open("derived/features.jsonl"))}
     X, y, parts = [], [], []
     for p, rows in groups.items():
-        holes = list(feats[p]["holes"])
+        row = feats[p]
+        holes = list(row["holes"])
+        sx, sy, sz = row["stock"]
         for fd, chain in rows:
             if not holes: break
             i = min(range(len(holes)), key=lambda k: abs(holes[k]["d"] - fd))
             h = holes.pop(i)
             if abs(h["d"] - fd) > 0.6: continue
-            X.append([h["d"], h["depth"], h["depth"] / h["d"], float(h["through"])])
+            X.append([h["d"], h["depth"], h["depth"] / h["d"], float(h["through"]),
+                      sz, row["top_z"] - h["mouth_z"], h["bottom_z"],
+                      h["d"] % 1.0, float(abs(h["d"] - round(h["d"])) < 0.01),
+                      min(h["x"], sx - h["x"], h["y"], sy - h["y"])])
             y.append(chain); parts.append(p)
     return np.array(X), np.array(y), parts
 
@@ -37,7 +42,7 @@ def main() -> int:
     test = np.array([idx[p] % 5 == 4 for p in parts])
     best = None
     models = [DecisionTreeClassifier(max_depth=d, min_samples_leaf=3, random_state=0) for d in (12, 16)]
-    models.append(RandomForestClassifier(n_estimators=200, min_samples_leaf=2, random_state=0, n_jobs=-1))
+    models.append(RandomForestClassifier(n_estimators=300, min_samples_leaf=2, random_state=0, n_jobs=-1))
     for m in models:
         m.fit(X[~test], y[~test])
         acc = m.score(X[test], y[test])
