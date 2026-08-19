@@ -4,7 +4,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Literal
 
-from .brep import CONCAVE, TANGENT, Box, Cylinder, FaceId, Part, Plane, Size
+from .brep import CONCAVE, FULL_TURN, TANGENT, Box, Cylinder, FaceId, Part, Plane, Size
 
 PocketKind = Literal["center", "edge", "corner", "slot"]
 Side = Literal["x0", "x1", "y0", "y1"]
@@ -64,11 +64,17 @@ def _is_blend(part: Part, face: Cylinder):
     return sum(1 for e in part.edges if face.index in e.faces and e.kind == TANGENT) >= 2
 
 def _hole_bottom(part: Part, floor: Plane):
-    touching = part.neighbours(floor.index)
-    if len(touching) != 1: return False
-    other = part.faces[next(iter(touching))]
-    return (isinstance(other, Cylinder) and other.is_full_circle
-            and abs(floor.area - math.pi * other.radius ** 2) < 1e-3)
+    # circular-ish floor bounded by an upright cylinder centred on it
+    b = floor.bbox
+    for i in part.neighbours(floor.index):
+        f = part.faces[i]
+        if not isinstance(f, Cylinder) or not f.is_upright: continue
+        r = f.radius
+        if (b.xmax - b.xmin <= 2 * r + 1e-3 and b.ymax - b.ymin <= 2 * r + 1e-3
+                and floor.area <= math.pi * r * r + 1e-3
+                and abs((b.xmax + b.xmin) / 2 - f.origin[0]) < 1e-3
+                and abs((b.ymax + b.ymin) / 2 - f.origin[1]) < 1e-3): return True
+    return False
 
 def _open_sides(floor: Plane, stock: Box) -> set[Side]:
     reach: tuple[tuple[Side, float, float], ...] = (
@@ -95,23 +101,30 @@ def find_chamfers(part: Part) -> list[Chamfer]:
     return out
 
 def find_holes(part: Part, top_z: float, bottom_z: float) -> list[Hole]:
+    # partial arcs count as a hole when one axis+radius covers most of a turn
     groups: dict[tuple[float, float, float], list[Cylinder]] = {}
     for f in part.cylinders():
-        if not f.is_full_circle or not f.is_upright: continue
+        if not f.is_upright or (not f.is_full_circle and _is_blend(part, f)): continue
         groups.setdefault((round(f.origin[0], GRID), round(f.origin[1], GRID), round(f.radius, GRID)), []).append(f)
     out = []
     for (x, y, radius), faces in groups.items():
+        by_span: dict[tuple[float, float], float] = {}
+        for f in faces: by_span[(round(f.bbox.zmin, 3), round(f.bbox.zmax, 3))] = by_span.get((round(f.bbox.zmin, 3), round(f.bbox.zmax, 3)), 0.0) + f.sweep
+        if not any(f.is_full_circle for f in faces) and max(by_span.values()) < 0.55 * FULL_TURN: continue
         low = min(f.bbox.zmin for f in faces)
         out.append(Hole(x=x, y=y, diameter=2 * radius, depth=top_z - low,
                         through=abs(low - bottom_z) < TOL, bottom_z=low,
                         faces=[f.index for f in faces]))
     return out
 
-def find_pockets(part: Part, top_z: float) -> list[Pocket]:
+def find_pockets(part: Part, top_z: float, hole_faces: set[FaceId] = frozenset()) -> list[Pocket]:
     out = []
     for floor in part.planes():
-        if not floor.faces_up or floor.bbox.zmin >= top_z - TOL: continue
+        if not floor.faces_up or floor.bbox.zmin >= top_z - 1e-2: continue
         if _hole_bottom(part, floor): continue
+        hole_nbrs = [part.faces[i] for i in part.neighbours(floor.index) if i in hole_faces]
+        if hole_nbrs and (floor.area < 100
+                          or any(floor.area <= math.pi * f.radius ** 2 + 1e-3 for f in hole_nbrs)): continue
         sides = [part.faces[i] for i, kind in part.neighbours(floor.index).items() if kind == CONCAVE]
         blends = [f for f in sides if isinstance(f, Cylinder) and _is_blend(part, f)]
         radii = {round(b.radius, GRID) for b in blends}
@@ -126,5 +139,6 @@ def extract(part: Part) -> Features:
     found = Features(stock=part.size, top_z=part.bbox.zmax, bottom_z=part.bbox.zmin)
     found.chamfers = find_chamfers(part)
     found.holes = find_holes(part, top_z=found.top_z, bottom_z=found.bottom_z)
-    found.pockets = find_pockets(part, top_z=found.top_z)
+    hole_faces = {i for h in found.holes for i in h.faces}
+    found.pockets = find_pockets(part, top_z=found.top_z, hole_faces=hole_faces)
     return found

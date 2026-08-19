@@ -25,13 +25,12 @@ def pocket_solid(part: Part, pocket: Pocket, top_z: float) -> m3d.Manifold:
     poly = [(x, y) for x, y, _ in brep.outline(part, floor)]
     return prism(poly, pocket.floor_z, top_z + EPS)
 
+def chamfer_face_solid(part: Part, fid: int, top_z: float) -> m3d.Manifold:
+    pts = np.array(brep.outline(part, fid))
+    lifted = pts.copy(); lifted[:, 2] = top_z + EPS
+    return hull_points(np.vstack([pts, lifted]))
 def chamfer_solid(part: Part, chamfer: Chamfer, top_z: float) -> m3d.Manifold:
-    wedges = []
-    for fid in chamfer.faces:
-        pts = np.array(brep.outline(part, fid))
-        lifted = pts.copy(); lifted[:, 2] = top_z + EPS
-        wedges.append(hull_points(np.vstack([pts, lifted])))
-    return m3d.Manifold.batch_boolean(wedges, m3d.OpType.Add)
+    return m3d.Manifold.batch_boolean([chamfer_face_solid(part, f, top_z) for f in chamfer.faces], m3d.OpType.Add)
 
 def hole_solid(hole_x: float, hole_y: float, radius: float, z_top: float, z_bottom: float,
                tip_angle_deg: float | None = None) -> m3d.Manifold:
