@@ -1,5 +1,15 @@
 # Where we're at — plain English
 
+> **Update (Aug 19, post-deadline submission):** this document describes the
+> earlier standard-library baseline. The final pipeline (`src/machineplan/`,
+> see [METHODS.md](METHODS.md)) attacks **all four tracks**: the pocket-outline
+> capability flagged below as the blocker was built with OpenCascade B-Rep
+> analysis, so Medium and the G-code track are attempted honestly — Easy edit
+> distance 0.098, Medium mean IoU 0.996 with 77% of ops in the top band, tools
+> 84.9%/76.8%, toolpath swept-volume IoU ~0.80. The constant-mesh shortcut
+> measured below stayed unexploited; it now serves as the calibration baseline
+> in METHODS.md showing our Medium number reflects real modelling.
+
 ## The problem
 
 Given a 3D model of a metal part, predict how a CNC machine should actually
