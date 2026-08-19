@@ -250,11 +250,11 @@ def plan(found: Features, drilling_first: bool | None = None) -> list[Op]:
     mill.sort(key=lambda o: MILL_ORDER.index(o.name) if o.name in MILL_ORDER else 0)
     if drilling_first and drill:
         m = hm_model()
-        # when the twist block leads, hole mills usually glue to its end (59%)
-        # but a trained model picks the 28% that instead trail the mill block
+        # when the twist block leads, insert-blind chains follow it (TW>I>M, 583 vs 214 GT);
+        # hole mills glue to the twist block's end unless the model says they trail the mills
         if hole_mills and m and not bool(m.predict([order_features(found)])[0]):
-            return lead + drill + mill + hole_mills
-        return lead + drill + hole_mills + mill
+            return drill + lead + mill + hole_mills
+        return drill + lead + hole_mills + mill
     return lead + mill + hole_mills + drill
 
 def features_from_row(row: dict) -> Features:
