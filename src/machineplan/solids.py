@@ -5,7 +5,7 @@ import numpy as np
 
 from . import brep
 from .brep import Part
-from .features import Chamfer, Features, Hole, Pocket
+from .features import Chamfer, Pocket
 
 SEGMENTS = 64
 EPS = 0.05
