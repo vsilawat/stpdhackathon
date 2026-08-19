@@ -9,7 +9,7 @@ from multiprocessing import Pool
 from pathlib import Path
 
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier, VotingClassifier
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
@@ -68,7 +68,10 @@ def train(name: str, y_by_part: dict[str, bool], rows: dict[str, list[float]], a
     y = np.array([y_by_part[p] for p in keep])
     idx = {p: i for i, p in enumerate(all_parts)}
     test = np.array([idx[p] % 5 == 4 for p in keep])
-    m = RandomForestClassifier(n_estimators=400, min_samples_leaf=2, random_state=0, n_jobs=-1)
+    m = VotingClassifier([
+        ("rf", RandomForestClassifier(n_estimators=400, min_samples_leaf=2, random_state=0, n_jobs=-1)),
+        ("hgb", HistGradientBoostingClassifier(max_iter=500, learning_rate=0.06, max_leaf_nodes=63,
+                                               l2_regularization=1.0, random_state=0))], voting="soft")
     m.fit(X[~test], y[~test])
     print(f"{name}: n={len(keep)} rate={y.mean():.3f} holdout acc: {m.score(X[test], y[test]):.4f} (n={test.sum()})")
     m.fit(X, y)

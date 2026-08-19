@@ -192,8 +192,13 @@ def order_features(found: Features) -> list[float]:
     hs, ps, cs = found.holes, found.pockets, found.chamfers
     tz = found.top_z
     sub = [h for h in hs if h.mouth_z < tz - 0.01]
-    names = [n for c in chain_names(found) for n in c]
-    finals = [c[-1] for c in chain_names(found) if c]
+    chains = chain_names(found)
+    names = [n for c in chains for n in c]
+    finals = [c[-1] for c in chains if c]
+    deps = [h.depth for h in hs]
+    bl = [h.depth for h in hs if not h.through]
+    th = [h.depth for h in hs if h.through]
+    lds = [h.depth / h.diameter for h in hs if h.diameter]
     return [len(hs), len(ps), len(cs), sum(h.through for h in hs), sum(not h.through for h in hs),
             max((h.diameter for h in hs), default=0), min((h.diameter for h in hs), default=0),
             max((h.depth / h.diameter for h in hs), default=0),
@@ -204,7 +209,17 @@ def order_features(found: Features) -> list[float]:
             sum(f in INSB_FINAL for f in finals), sum(n.startswith("MILL_") for n in names),
             sum("GUN" in n for n in names), sum(n == "INDEXABLE_INSERT_DRILL_THROUGH_HOLE_FROM_SOLID" for n in names),
             sum(n == "SPOT_DRILL" for n in names), sum(n == "BORE_BLIND_HOLE" for n in names),
-            sum(n == "DRILL_BLIND_HOLE_INTO_CENTER" for n in finals)]
+            sum(n == "DRILL_BLIND_HOLE_INTO_CENTER" for n in finals),
+            min(deps, default=0), max(deps, default=0), sum(deps) / max(len(deps), 1),
+            min(bl, default=0), max(bl, default=0), min(th, default=0),
+            min(lds, default=0), sum(lds) / max(len(lds), 1),
+            min((tz - h.mouth_z for h in hs), default=0), max((tz - h.mouth_z for h in hs), default=0),
+            len(chains), sum(len(c) for c in chains) / max(len(chains), 1),
+            sum("HOLE" in n and n.startswith("MILL_") for n in names),
+            found.stock[0], found.stock[1], tz,
+            min((p.depth for p in ps), default=0), sum(p.kind == "edge" for p in ps),
+            min((h.bottom_z for h in hs), default=0),
+            sum(h.diameter * h.diameter * h.depth for h in hs) / 1000.0]
 
 # model predicts the spot/twist block's placement relative to the mill block
 def predict_drilling_first(found: Features) -> bool:
