@@ -160,22 +160,50 @@ def order_model():
         _ORDER = pickle.load(p.open("rb")) if p.exists() else False
     return _ORDER
 
+_HM: object = None
+def hm_model():
+    global _HM
+    if _HM is None:
+        import pickle
+        from pathlib import Path
+        p = Path(__file__).resolve().parents[2] / "derived/hm_model.pkl"
+        _HM = pickle.load(p.open("rb")) if p.exists() else False
+    return _HM
+
+def chain_names(found: Features) -> list[list[str]]:
+    holes, model = found.holes, chain_model()
+    if not holes: return []
+    if not model: return [[o.name for o in hole_chain(h)] for h in holes]
+    import numpy as np
+    sx, sy, sz = found.stock
+    X = np.array([[h.diameter, h.depth, h.depth / h.diameter, float(h.through),
+                   sz, found.top_z - h.mouth_z, h.bottom_z,
+                   h.diameter % 1.0, float(abs(h.diameter - round(h.diameter)) < 0.01),
+                   min(h.x, sx - h.x, h.y, sy - h.y)] for h in holes])
+    return [c.split(">") for c in model.predict(X)]
+
 def order_features(found: Features) -> list[float]:
     hs, ps, cs = found.holes, found.pockets, found.chamfers
     tz = found.top_z
     sub = [h for h in hs if h.mouth_z < tz - 0.01]
+    names = [n for c in chain_names(found) for n in c]
+    finals = [c[-1] for c in chain_names(found) if c]
     return [len(hs), len(ps), len(cs), sum(h.through for h in hs), sum(not h.through for h in hs),
             max((h.diameter for h in hs), default=0), min((h.diameter for h in hs), default=0),
             max((h.depth / h.diameter for h in hs), default=0),
             max((p.depth for p in ps), default=0), sum(p.area for p in ps),
             found.stock[2], found.stock[0] * found.stock[1],
             len(sub), len(sub) / max(len(hs), 1),
-            sum(1 for h in hs if h.diameter >= 15), sum(1 for h in hs if h.depth / h.diameter >= 5)]
+            sum(1 for h in hs if h.diameter >= 15), sum(1 for h in hs if h.depth / h.diameter >= 5),
+            sum(f in INSB_FINAL for f in finals), sum(n.startswith("MILL_") for n in names),
+            sum("GUN" in n for n in names), sum(n == "INDEXABLE_INSERT_DRILL_THROUGH_HOLE_FROM_SOLID" for n in names),
+            sum(n == "SPOT_DRILL" for n in names), sum(n == "BORE_BLIND_HOLE" for n in names),
+            sum(n == "DRILL_BLIND_HOLE_INTO_CENTER" for n in finals)]
 
-# fallback rule: any blind hole -> drilling first (91.9% holdout); model is 92.2%
+# model predicts the spot/twist block's placement relative to the mill block
 def predict_drilling_first(found: Features) -> bool:
     model = order_model()
-    if model: return not int(model.predict([order_features(found)])[0])
+    if model: return bool(model.predict([order_features(found)])[0])
     return any(not h.through for h in found.holes) or (bool(found.holes) and len(found.pockets) > 6)
 
 # spot block sits at the first spotted chain's position (R4, 90.5% of GT drill runs)
@@ -192,13 +220,28 @@ def drill_phase(chains: list[list[Op]], keep_mill: bool) -> tuple[list[Op], list
 
 KEEP_MILL_IN_CHAIN = False
 
+# insert-blind chains lead the whole plan (93.7% of GT); when the twist block
+# is first, hole-mill ops glue to its end (100%), else to the mill block's end
+INSB_FINAL = ("INDEXABLE_INSERT_DRILL_BLIND_HOLE_FROM_SOLID", "DRILL_TO_ENLARGE_BLIND_HOLE")
+
 def plan(found: Features, drilling_first: bool | None = None) -> list[Op]:
     if drilling_first is None: drilling_first = predict_drilling_first(found)
     chains = sorted(hole_chains(found), key=lambda c: not (c and c[0].feature and c[0].feature.through))
-    drill, hole_mills = drill_phase(chains, KEEP_MILL_IN_CHAIN)
-    mill = chamfer_ops(found) + pocket_ops(found) + hole_mills
+    front = [c for c in chains if c and c[-1].name in INSB_FINAL]
+    rest = [c for c in chains if not (c and c[-1].name in INSB_FINAL)]
+    drill, hole_mills = drill_phase(rest, KEEP_MILL_IN_CHAIN)
+    lead = [o for c in front for o in c]
+    hole_mills.sort(key=lambda o: MILL_ORDER.index(o.name) if o.name in MILL_ORDER else 0)
+    mill = chamfer_ops(found) + pocket_ops(found)
     mill.sort(key=lambda o: MILL_ORDER.index(o.name) if o.name in MILL_ORDER else 0)
-    return drill + mill if drilling_first and drill else mill + drill
+    if drilling_first and drill:
+        m = hm_model()
+        # when the twist block leads, hole mills usually glue to its end (59%)
+        # but a trained model picks the 28% that instead trail the mill block
+        if hole_mills and m and not bool(m.predict([order_features(found)])[0]):
+            return lead + drill + mill + hole_mills
+        return lead + drill + hole_mills + mill
+    return lead + mill + hole_mills + drill
 
 def features_from_row(row: dict) -> Features:
     from .brep import Size
