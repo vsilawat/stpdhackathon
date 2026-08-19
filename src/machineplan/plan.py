@@ -13,7 +13,7 @@ O1_BY_O2 = {"AREA_MILL": "mill_contour", "FLOOR_WALL": "mill_planar", "SPOT_DRIL
 POCKET_OP = {"corner": "MILL_CORNER_NOTCH_RECTANGULAR", "center": "MILL_RECTANGULAR_POCKET",
              "slot": "MILL_RECTANGULAR_SLOT", "edge": "MILL_SLOT"}
 MILL_ORDER = ["AREA_MILL", "MILL_OPEN_POCKET", "MILL_CORNER_NOTCH_RECTANGULAR", "MILL_RECTANGULAR_POCKET",
-              "MILL_RECTANGULAR_SLOT", "MILL_SLOT", "MILL_THROUGH_HOLE_FROM_SOLID_MATERIAL",
+              "MILL_SLOT", "MILL_RECTANGULAR_SLOT", "MILL_THROUGH_HOLE_FROM_SOLID_MATERIAL",
               "MILL_BLIND_HOLE_FROM_SOLID_MATERIAL", "MILL_ROUGH_BLIND_HOLE_CONTOUR",
               "MILL_FINISH_BLIND_HOLE_FLAT_BOTTOM"]
 
@@ -41,9 +41,39 @@ def chamfer_ops(found: Features) -> list[Op]:
     return [Op("AREA_MILL", feature=c, tool_type="chamfer_mill", tool_diameter=20.0, extra={"face": f})
             for c in found.chamfers for f in (c.faces or [None])]
 
+_PKIND: object = None
+def pocket_kind_model():
+    global _PKIND
+    if _PKIND is None:
+        import pickle
+        from pathlib import Path
+        p = Path(__file__).resolve().parents[2] / "derived/pocket_kind_model.pkl"
+        _PKIND = pickle.load(p.open("rb")) if p.exists() else False
+    return _PKIND
+
+def pocket_feats(p: Pocket) -> list[float]:
+    from .tooling import pocket_dia_feats
+    return pocket_dia_feats(p)
+
+# op names are distinct per part (0/8539 GT parts repeat one) -> best distinct assignment
+def pocket_names(ps: list[Pocket]) -> list[str]:
+    if not ps: return []
+    m = pocket_kind_model()
+    if not m or any(p.w <= 0 for p in ps): return [POCKET_OP[p.kind] for p in ps]
+    import numpy as np
+    P = m.predict_proba([pocket_feats(p) for p in ps])
+    cls = list(m.classes_)
+    if len(ps) == 1 or len(ps) > len(cls): return [str(cls[int(np.argmax(row))]) for row in P]
+    from itertools import permutations
+    logp = np.log(P + 1e-9)
+    best = max(permutations(range(len(cls)), len(ps)), key=lambda pm: sum(logp[i][j] for i, j in enumerate(pm)))
+    return [str(cls[j]) for j in best]
+
 def pocket_ops(found: Features) -> list[Op]:
-    return [Op(POCKET_OP[p.kind], feature=p, tool_type="end_mill",
-               tool_diameter=2 * (p.fillet_radius or 5.0)) for p in found.pockets]
+    from . import tooling
+    return [Op(nm, feature=p, tool_type="end_mill", tool_diameter=d)
+            for nm, p, d in zip(pocket_names(found.pockets), found.pockets,
+                                tooling.pocket_dias(found.pockets), strict=True)]
 
 def hole_chain(h: Hole) -> list[Op]:
     """Mined chain rules (derived/chains.csv)."""
@@ -108,8 +138,15 @@ def assign_tools(ops: list[Op], found: Features) -> None:
     for i, o in enumerate(ops[:-1]):
         if o.name != "SPOT_DRILL": o.extra["pilot"] = True
     pilots = [o for o in ops if o.name == "DRILL_BLIND_HOLE_INTO_CENTER"]
+    gun = next((o for o in ops if "GUN_DRILL" in o.name), None)
+    if gun and pilots and gun.tool_diameter and ops[-1].tool_diameter:
+        d = tooling.gun_pilot(gun.tool_diameter, ops[-1].tool_diameter)
+        if d: pilots[0].tool_diameter = d
     for o in ops:
         if "GUN_DRILL" in o.name and pilots: o.extra["pilot_dia"] = pilots[0].tool_diameter
+    if any("GUN_DRILL" in o.name for o in ops):
+        for o in ops:
+            if o.name == "DRILL_TO_ENLARGE_THROUGH_HOLE": o.extra["gun_chain"] = True
 
 def is_mill_op(o: Op) -> bool: return o.name in MILL_ORDER or o.name == "AREA_MILL"
 
@@ -141,13 +178,25 @@ def predict_drilling_first(found: Features) -> bool:
     if model: return not int(model.predict([order_features(found)])[0])
     return any(not h.through for h in found.holes) or (bool(found.holes) and len(found.pockets) > 6)
 
+# spot block sits at the first spotted chain's position (R4, 90.5% of GT drill runs)
+def drill_phase(chains: list[list[Op]], keep_mill: bool) -> tuple[list[Op], list[Op]]:
+    spots = [c[0] for c in chains if c and c[0].name == "SPOT_DRILL"]
+    out, milled, placed = [], [], False
+    for c in chains:
+        rem = c[1:] if c and c[0].name == "SPOT_DRILL" else c
+        if c and c[0].name == "SPOT_DRILL" and not placed: out += spots; placed = True
+        for o in rem:
+            if not keep_mill and is_mill_op(o): milled.append(o)
+            else: out.append(o)
+    return out, milled
+
+KEEP_MILL_IN_CHAIN = False
+
 def plan(found: Features, drilling_first: bool | None = None) -> list[Op]:
     if drilling_first is None: drilling_first = predict_drilling_first(found)
-    chains = hole_chains(found)
-    spots = [c[0] for c in chains if c and c[0].name == "SPOT_DRILL"]
-    per_hole = [op for c in chains for op in (c[1:] if c and c[0].name == "SPOT_DRILL" else c)]
-    drill = spots + [o for o in per_hole if not is_mill_op(o)]
-    mill = chamfer_ops(found) + pocket_ops(found) + [o for o in per_hole if is_mill_op(o)]
+    chains = sorted(hole_chains(found), key=lambda c: not (c and c[0].feature and c[0].feature.through))
+    drill, hole_mills = drill_phase(chains, KEEP_MILL_IN_CHAIN)
+    mill = chamfer_ops(found) + pocket_ops(found) + hole_mills
     mill.sort(key=lambda o: MILL_ORDER.index(o.name) if o.name in MILL_ORDER else 0)
     return drill + mill if drilling_first and drill else mill + drill
 
@@ -155,10 +204,12 @@ def features_from_row(row: dict) -> Features:
     from .brep import Size
     found = Features(stock=Size(*row["stock"]), top_z=row["top_z"], bottom_z=row["bottom_z"])
     found.holes = [Hole(x=h["x"], y=h["y"], diameter=h["d"], depth=h["depth"], through=h["through"],
-                        bottom_z=h["bottom_z"], mouth_z=h.get("mouth_z", row["top_z"])) for h in row["holes"]]
+                        bottom_z=h["bottom_z"], mouth_z=h.get("mouth_z", row["top_z"]),
+                        flat=h.get("flat", False)) for h in row["holes"]]
     found.pockets = [Pocket(floor_z=p["floor_z"], depth=p["depth"], area=p["area"], kind=p["kind"],
-                            open_sides=p["open_sides"], fillet_radius=p["fillet_radius"],
-                            corners=p["corners"]) for p in row["pockets"]]
+                            open_sides=p["open_sides"], fillet_radius=p["fillet_radius"], corners=p["corners"],
+                            w=p.get("w", 0.0), l=p.get("l", 0.0), mi=p.get("mi", 0.0), hull=p.get("hull", 1.0))
+                     for p in row["pockets"]]
     found.chamfers = [Chamfer(width=c["width"], angle_deg=c["angle_deg"],
                               faces=list(range(c.get("n_faces", 1)))) for c in row["chamfers"]]
     return found

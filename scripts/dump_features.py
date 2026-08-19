@@ -14,11 +14,12 @@ OUT = Path("derived/features.jsonl")
 
 def hole_row(h: features.Hole) -> dict:
     return {"x": h.x, "y": h.y, "d": h.diameter, "depth": h.depth,
-            "through": h.through, "bottom_z": h.bottom_z, "mouth_z": h.mouth_z}
+            "through": h.through, "bottom_z": h.bottom_z, "mouth_z": h.mouth_z, "flat": h.flat}
 
 def pocket_row(p: features.Pocket) -> dict:
     return {"floor_z": p.floor_z, "depth": p.depth, "area": p.area, "kind": p.kind,
-            "open_sides": p.open_sides, "fillet_radius": p.fillet_radius, "corners": p.corners}
+            "open_sides": p.open_sides, "fillet_radius": p.fillet_radius, "corners": p.corners,
+            "w": p.w, "l": p.l, "mi": p.mi, "hull": p.hull}
 
 def chamfer_row(c: features.Chamfer) -> dict:
     return {"width": c.width, "angle_deg": c.angle_deg, "n_faces": len(c.faces)}

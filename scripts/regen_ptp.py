@@ -20,6 +20,12 @@ def do_part(part_id: str) -> str:
         pd = OUT / part_id; pd.mkdir(parents=True, exist_ok=True)
         for i, o in enumerate(ops):
             (pd / f"{part_id}_operation_{i + 1:02d}.ptp").write_text(ptp.emit(part_id, o, found, part))
+        import json
+        tools = {"part_id": part_id, "summary": {"number_of_operations": len(ops)},
+                 "operations": [{"operation_number": i + 1, "tool_type": o.tool_type or "end_mill",
+                                 "tool_diameter_mm": round(o.tool_diameter or 10.0, 2)}
+                                for i, o in enumerate(ops)]}
+        (OUT.parent / "hard_tools" / f"{part_id}_tools.json").write_text(json.dumps(tools, indent=1))
         return "ok"
     except Exception:
         return f"ERR {part_id} {traceback.format_exc(limit=1)}"

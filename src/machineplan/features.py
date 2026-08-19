@@ -27,6 +27,7 @@ class Hole:
     through: bool
     bottom_z: float
     mouth_z: float = 0.0
+    flat: bool = False
     faces: list[FaceId] = field(default_factory=list)
 
 @dataclass(slots=True)
@@ -38,6 +39,10 @@ class Pocket:
     open_sides: int
     fillet_radius: float | None
     corners: int
+    w: float = 0.0
+    l: float = 0.0
+    mi: float = 0.0
+    hull: float = 1.0
     faces: list[FaceId] = field(default_factory=list)
 
 @dataclass(slots=True)
@@ -113,10 +118,35 @@ def find_holes(part: Part, top_z: float, bottom_z: float) -> list[Hole]:
         for f in faces: by_span[(round(f.bbox.zmin, 3), round(f.bbox.zmax, 3))] = by_span.get((round(f.bbox.zmin, 3), round(f.bbox.zmax, 3)), 0.0) + f.sweep
         if not any(f.is_full_circle for f in faces) and max(by_span.values()) < 0.55 * FULL_TURN: continue
         low = min(f.bbox.zmin for f in faces)
+        through = abs(low - bottom_z) < TOL
+        # flat bottom (planar floor) means the blind hole was milled, not drilled
+        flat = not through and any(
+            isinstance(part.faces[i], Plane) and abs(part.faces[i].bbox.zmax - low) < 1e-3
+            and abs(part.faces[i].bbox.zmin - low) < 1e-3
+            for f in faces for i in part.neighbours(f.index))
         out.append(Hole(x=x, y=y, diameter=2 * radius, depth=top_z - low,
-                        through=abs(low - bottom_z) < TOL, bottom_z=low,
+                        through=through, bottom_z=low, flat=flat,
                         mouth_z=max(f.bbox.zmax for f in faces), faces=[f.index for f in faces]))
     return out
+
+def _floor_dims(part: Part, face_id: FaceId) -> tuple[float, float, float, float]:
+    import math as _m
+    from shapely.geometry import Polygon
+    from . import brep
+    try:
+        pts = [(x, y) for x, y, _ in brep.outline(part, face_id)]
+        poly = Polygon(pts)
+        r = poly.minimum_rotated_rectangle.exterior.coords
+        e1, e2 = _m.dist(r[0], r[1]), _m.dist(r[1], r[2])
+        lo, hi = 0.0, 0.5 * max(e1, e2)
+        for _ in range(24):
+            mid = (lo + hi) / 2
+            if poly.buffer(-mid).is_empty: hi = mid
+            else: lo = mid
+        hull = poly.area / poly.convex_hull.area if poly.convex_hull.area > 0 else 1.0
+        return min(e1, e2), max(e1, e2), 2 * lo, hull
+    except Exception:
+        return 0.0, 0.0, 0.0, 1.0
 
 def find_pockets(part: Part, top_z: float, hole_faces: set[FaceId] = frozenset()) -> list[Pocket]:
     out = []
@@ -130,10 +160,12 @@ def find_pockets(part: Part, top_z: float, hole_faces: set[FaceId] = frozenset()
         blends = [f for f in sides if isinstance(f, Cylinder) and _is_blend(part, f)]
         radii = {round(b.radius, GRID) for b in blends}
         open_at = _open_sides(floor, part.bbox)
+        w, l, mi, hull = _floor_dims(part, floor.index)
         out.append(Pocket(floor_z=floor.bbox.zmin, depth=top_z - floor.bbox.zmin, area=floor.area,
                           kind=_pocket_kind(open_at, len(blends)), open_sides=len(open_at),
                           fillet_radius=(radii.pop() if len(radii) == 1 else None),
-                          corners=len(blends), faces=[floor.index, *(f.index for f in sides)]))
+                          corners=len(blends), w=w, l=l, mi=mi, hull=hull,
+                          faces=[floor.index, *(f.index for f in sides)]))
     return out
 
 def extract(part: Part) -> Features:

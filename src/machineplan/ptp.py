@@ -38,17 +38,37 @@ class Prog:
 
 def spot_depth(h: Hole) -> float: return 3.0 if h.diameter > 17.45 else 0.043 * h.diameter
 
+_PA: dict | None = None
+def point_angle(name: str, dt: float) -> float | None:
+    global _PA
+    if _PA is None:
+        import json
+        from pathlib import Path
+        p = Path(__file__).resolve().parents[2] / "derived/point_angles.json"
+        _PA = json.loads(p.read_text()) if p.exists() else {}
+    return _PA.get(f"{name}|{round(dt, 2)}")
+
+# tip protrusion from tool point angle (details.txt PA), fallback to mined constants
+def prot_z(name: str, h: Hole, dt: float, default: float) -> float:
+    pa = point_angle(name, dt)
+    if pa and pa < 179.0: return h.bottom_z - (dt / 2 / math.tan(math.radians(pa) / 2) + 1.5)
+    return default
+
 def cycle_params(op: Op, h: Hole, dt: float):
     mouth = h.mouth_z
     n = op.name
     if n == "SPOT_DRILL": return "G81", mouth - spot_depth(h), mouth + 3, None
     if n == "BORE_BLIND_HOLE": return "G85", h.bottom_z, mouth + 2, None
     if not h.through: return "G81", h.bottom_z, mouth + 2, None
-    if n == "DRILL_BLIND_HOLE_INTO_CENTER": return "G81", mouth - 1.5 * dt, mouth + 2, None
+    if n == "DRILL_BLIND_HOLE_INTO_CENTER":
+        z = mouth - (1.5019 * dt + 0.02) if h.through else h.bottom_z
+        return "G81", z, mouth + 2, None
     if n == "DRILL_THROUGH_HOLE_INTO_CENTER" and op.extra.get("pilot"):
-        return "G73", h.bottom_z - (0.182 * dt + 1.5), mouth + 2, 0.94 * dt
+        return "G73", prot_z(n, h, dt, h.bottom_z - (0.182 * dt + 1.5)), mouth + 2, 0.94 * dt
+    if n == "DRILL_TO_ENLARGE_THROUGH_HOLE" and op.extra.get("gun_chain") and dt < 15:
+        return "G73", prot_z(n, h, dt, h.bottom_z - (0.182 * dt + 1.5)), mouth + 2, 0.94 * dt
     a, b, cyc = PROT.get(n) or PROT.get(n.replace("BLIND", "THROUGH")) or (0.33, 0.8, "G81")
-    return cyc, h.bottom_z - (a * dt + b), mouth + 2, (0.94 * dt if cyc == "G73" else None)
+    return cyc, prot_z(n, h, dt, h.bottom_z - (a * dt + b)), mouth + 2, (0.94 * dt if cyc == "G73" else None)
 
 def emit_cycle(p: Prog, op: Op, h: Hole, zc: float, dt: float):
     cyc, z, r, q = cycle_params(op, h, dt)
