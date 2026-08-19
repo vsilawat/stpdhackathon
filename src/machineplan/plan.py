@@ -135,6 +135,12 @@ def assign_tools(ops: list[Op], found: Features) -> None:
     for i, o in enumerate(ops):
         o.tool_diameter = tooling.hole_tool_dia(o.name, o.feature, found, i, len(ops))
         o.tool_type = tooling.tool_type(o.name)
+    # hole mills cut at the hole dia, except a pre-bore rough mill which undersizes
+    has_bore = any(o.name == "BORE_BLIND_HOLE" for o in ops)
+    for o in ops:
+        if o.name.startswith("MILL_ROUGH_BLIND_HOLE"): o.tool_diameter = o.feature.diameter
+        elif o.name.startswith("MILL_BLIND_HOLE_FROM_SOLID"):
+            o.tool_diameter = tooling.prebore_mill_dia(o.feature.diameter) if has_bore else o.feature.diameter
     for i, o in enumerate(ops[:-1]):
         if o.name != "SPOT_DRILL": o.extra["pilot"] = True
     pilots = [o for o in ops if o.name == "DRILL_BLIND_HOLE_INTO_CENTER"]
@@ -213,9 +219,12 @@ def drill_phase(chains: list[list[Op]], keep_mill: bool) -> tuple[list[Op], list
     for c in chains:
         rem = c[1:] if c and c[0].name == "SPOT_DRILL" else c
         if c and c[0].name == "SPOT_DRILL" and not placed: out += spots; placed = True
+        prev_milled = False
         for o in rem:
-            if not keep_mill and is_mill_op(o): milled.append(o)
-            else: out.append(o)
+            # a bore stays glued to its hole's mill op (GT: bore follows the HM)
+            if not keep_mill and (is_mill_op(o) or (o.name == "BORE_BLIND_HOLE" and prev_milled)):
+                milled.append(o); prev_milled = True
+            else: out.append(o); prev_milled = False
     return out, milled
 
 KEEP_MILL_IN_CHAIN = False
@@ -231,7 +240,12 @@ def plan(found: Features, drilling_first: bool | None = None) -> list[Op]:
     rest = [c for c in chains if not (c and c[-1].name in INSB_FINAL)]
     drill, hole_mills = drill_phase(rest, KEEP_MILL_IN_CHAIN)
     lead = [o for c in front for o in c]
-    hole_mills.sort(key=lambda o: MILL_ORDER.index(o.name) if o.name in MILL_ORDER else 0)
+    units: list[list[Op]] = []
+    for o in hole_mills:
+        if o.name == "BORE_BLIND_HOLE" and units: units[-1].append(o)
+        else: units.append([o])
+    units.sort(key=lambda u: MILL_ORDER.index(u[0].name) if u[0].name in MILL_ORDER else 0)
+    hole_mills = [o for u in units for o in u]
     mill = chamfer_ops(found) + pocket_ops(found)
     mill.sort(key=lambda o: MILL_ORDER.index(o.name) if o.name in MILL_ORDER else 0)
     if drilling_first and drill:

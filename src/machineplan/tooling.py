@@ -65,6 +65,17 @@ def pocket_dias(ps: list) -> list[float]:
     if not m or any(p.w <= 0 for p in ps): return [pocket_tool_dia(p) for p in ps]
     return [float(v) for v in m.predict(pocket_dia_X(ps))]
 
+_PREBORE: object = None
+def prebore_mill_dia(fd: float) -> float:
+    global _PREBORE
+    if _PREBORE is None:
+        import pickle
+        from pathlib import Path
+        p = Path(__file__).resolve().parents[2] / "derived/prebore_mill_dia.pkl"
+        _PREBORE = pickle.load(p.open("rb")) if p.exists() else False
+    if not _PREBORE: return fd
+    return float(_PREBORE.predict([[fd, fd % 1.0]])[0])
+
 _GP: dict | None = None
 def gun_pilot(gun_dia: float, final_dia: float) -> float | None:
     global _GP

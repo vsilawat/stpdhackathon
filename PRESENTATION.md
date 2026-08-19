@@ -13,8 +13,10 @@ learning. Mining all plans showed each hole's process chain is a function of its
 exact round-number thresholds: through holes under 12 mm get spot-plus-twist-drill; slender holes
 with length-to-diameter over 5 get the gun-drill sequence; over 15 mm switches to indexable insert
 drills. Those recovered rules alone explain 82.5% of chains; a small random forest resolves the
-residual ambiguity — like insert-catalog grid membership — for 96.3% exact chains on holdout. Sequence
-F1 is 0.955.
+residual ambiguity — like insert-catalog grid membership — for 96.3% exact chains on holdout.
+Mining op indices also exposed the generator's fixed plan skeleton: insert-blind chains always
+lead, then a twist-drill block and a mill block in one of two orders — the one real binary in the
+data, which a forest predicts at 91.5%. Sequence F1 is 0.955, mean edit distance 0.11.
 
 **Slide 3 — Material removal (45s).**
 For the medium track each operation is an analytic solid — cylinder plus 118-degree tip for twist
@@ -37,5 +39,6 @@ the official validator with zero errors, and every number in it traces back to a
 you in the data. We didn't fit the dataset — we recovered the planner that made it.
 
 ---
-*Backup facts: Easy lev 0.152 / F1 0.955 → 18/20. Medium mean IoU 0.991. Tools ≈94% within 2%.
-Chain RF: 10 geometric features, 96.3% exact. Order model GBT 92.2%.*
+*Backup facts: Easy lev 0.113 / F1 0.955 → 18/20. Medium mean IoU 0.990. Tools ≈94% within 2%.
+Chain RF: 10 geometric features, 96.3% exact. Block-order RF 91.5%; hole-mill placement RF 81.2%.
+Oracle with perfect block order: lev 0.105 — the template carries the structure.*

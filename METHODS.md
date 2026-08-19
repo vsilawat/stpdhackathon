@@ -26,8 +26,17 @@ The recovered decision rules (thresholds are exact round numbers in the data):
 
 These rules alone reproduce 82.5% of chains exactly. The residual ambiguity (insert-size grid
 membership, soft L/D boundary 4.7–5.3) is handled by a random forest over 10 geometric features:
-**96.3% exact-chain accuracy** on holdout. Block order (drilling-first vs milling-first) is a
-GBT on 16 part-level features (92.2%). o1/o2 labels are a pure function of the op name.
+**96.3% exact-chain accuracy** on holdout. o1/o2 labels are a pure function of the op name.
+
+**Global block template.** Categorising every training op and mining run patterns over `op_index`
+revealed the generator's fixed plan skeleton: indexable-insert *blind* chains always lead the plan
+(93.7%), then a **twist-drill block** (spot drills first, then drill chains) and a **mill block**
+(chamfer area-mills, then pocket mills) in one of two orders — the only genuine binary in the data.
+Hole-milling ops glue to the end of whichever block comes first (100% when drilling leads), and
+boring follows its hole's mill. Two random forests over 23 part-level features decide the residual
+choices: block order (**91.5%** holdout) and hole-mill placement (**81.2%** vs 67.6% base rate).
+An oracle with a perfect binary scores 0.105 mean normalised Levenshtein, so the template itself —
+not the classifier — carries the structure. Holdout: **mean lev 0.113, set-F1 0.955**.
 
 ## 3. IPW solids — Medium track
 
