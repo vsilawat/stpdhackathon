@@ -192,7 +192,6 @@ Progress on step F1: 54.7% → 67.3% (G-code hole alignment) → 75.2%
 .
 ├── README.md                  this file — approach, evidence, results
 ├── SUMMARY_FOR_TEAM.md        non-technical summary for teammates
-├── PRESENTATION.md            Round 1 slide outline + timed 3-min script
 │
 ├── scripts/                   the pipeline (stdlib only)  — see scripts/README.md
 │   ├── step_parse.py            dependency-free STEP AP214 reader
