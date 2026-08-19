@@ -236,8 +236,10 @@ INSB_FINAL = ("INDEXABLE_INSERT_DRILL_BLIND_HOLE_FROM_SOLID", "DRILL_TO_ENLARGE_
 def plan(found: Features, drilling_first: bool | None = None) -> list[Op]:
     if drilling_first is None: drilling_first = predict_drilling_first(found)
     chains = sorted(hole_chains(found), key=lambda c: not (c and c[0].feature and c[0].feature.through))
-    front = [c for c in chains if c and c[-1].name in INSB_FINAL]
-    rest = [c for c in chains if not (c and c[-1].name in INSB_FINAL)]
+    # insert-blind chains lead a mill-first plan but stay at their chain position
+    # among the drill chains when the twist block leads (GT run patterns)
+    front = [] if drilling_first else [c for c in chains if c and c[-1].name in INSB_FINAL]
+    rest = [c for c in chains if c not in front]
     drill, hole_mills = drill_phase(rest, KEEP_MILL_IN_CHAIN)
     lead = [o for c in front for o in c]
     units: list[list[Op]] = []
