@@ -13,6 +13,9 @@ from sklearn.tree import DecisionTreeClassifier
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+INSERT_GRID = [x / 2 for x in range(30, 61)] + [40.0, 42.0, 50.0]
+def grid_dist(d: float) -> float: return min(abs(d - g) for g in INSERT_GRID)
+
 def load():
     groups = defaultdict(list)
     for r in csv.DictReader(open("derived/chains.csv")):
@@ -32,7 +35,8 @@ def load():
             X.append([h["d"], h["depth"], h["depth"] / h["d"], float(h["through"]),
                       sz, row["top_z"] - h["mouth_z"], h["bottom_z"],
                       h["d"] % 1.0, float(abs(h["d"] - round(h["d"])) < 0.01),
-                      min(h["x"], sx - h["x"], h["y"], sy - h["y"])])
+                      min(h["x"], sx - h["x"], h["y"], sy - h["y"]),
+                      grid_dist(h["d"]), float(grid_dist(h["d"]) < 0.05)])
             y.append(chain); parts.append(p)
     return np.array(X), np.array(y), parts
 
@@ -48,8 +52,8 @@ def main() -> int:
         acc = m.score(X[test], y[test])
         print(f"{type(m).__name__}: holdout chain acc {acc:.4f}")
         if best is None or acc > best[1]: best = (m, acc)
-    pickle.dump(best[0], open("derived/chain_tree.pkl", "wb"))
-    print(f"saved derived/chain_tree.pkl (n={len(y)}, acc={best[1]:.4f})")
+    pickle.dump(best[0], open("derived/chain_tree12.pkl", "wb"))
+    print(f"saved derived/chain_tree12.pkl (n={len(y)}, acc={best[1]:.4f})")
     return 0
 
 if __name__ == "__main__":
