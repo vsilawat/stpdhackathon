@@ -45,9 +45,11 @@ def done(part_id: str) -> bool:
     return d.is_dir() and len(list(d.glob("*.ptp"))) == n
 
 def main() -> int:
+    import os
+    for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "LOKY_MAX_CPU_COUNT"): os.environ[v] = "1"
     for d in ("easy", "hard_tools", "medium", "hard_ptp"): (OUT / d).mkdir(parents=True, exist_ok=True)
     parts = sorted(p.name for p in DATA.iterdir() if p.is_dir())
-    todo = [p for p in parts if not done(p)]
+    todo = parts if "--force" in sys.argv else [p for p in parts if not done(p)]
     print(f"{len(todo)}/{len(parts)} to generate", flush=True)
     nerr = 0
     with mp.Pool(processes=max(mp.cpu_count() - 2, 2)) as pool:

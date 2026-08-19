@@ -122,9 +122,23 @@ def emit_mill_hole(p: Prog, op: Op, h: Hole, zc: float, dt: float, top: float):
     p.line("M5")
     p.line("M2")
 
-def _rings(poly_xy: list[tuple[float, float]], dt: float):
+# open sides: tool center overruns the stock boundary by ~r (GT slots run r past both ends)
+def _extend_open(poly, dt: float, sx: float, sy: float):
+    from shapely.geometry import LineString
+    from shapely.ops import unary_union
+    ext, tol = [], 0.5
+    cs = list(poly.exterior.coords)
+    for (x1, y1), (x2, y2) in zip(cs, cs[1:]):
+        if (abs(x1) < tol and abs(x2) < tol) or (abs(x1 - sx) < tol and abs(x2 - sx) < tol) \
+           or (abs(y1) < tol and abs(y2) < tol) or (abs(y1 - sy) < tol and abs(y2 - sy) < tol):
+            ext.append(LineString([(x1, y1), (x2, y2)]).buffer(dt + 0.5, cap_style=2))
+    return unary_union([poly] + ext) if ext else poly
+
+def _rings(poly_xy: list[tuple[float, float]], dt: float, stock=None):
     from shapely.geometry import Polygon
     poly = Polygon(poly_xy)
+    if not poly.is_valid: poly = poly.buffer(0)
+    if stock: poly = _extend_open(poly, dt, stock[0], stock[1])
     off, rings = 0.5 * dt, []
     while True:
         inner = poly.buffer(-off, join_style=2)
@@ -134,10 +148,45 @@ def _rings(poly_xy: list[tuple[float, float]], dt: float):
         off += 0.65 * dt
     return rings[::-1]  # inside-out
 
-def emit_pocket(p: Prog, op: Op, part: Part, zc: float, dt: float, top: float):
+# NX open-slot template: rails at wall+r, corner pivot arcs, cross pass at far end + r
+def emit_slot(p: Prog, op: Op, part: Part, zc: float, dt: float):
+    from shapely.geometry import Polygon
+    pk = op.feature
+    pts = [(x, y) for x, y, _ in brep.outline(part, pk.faces[0])]
+    C = np.array(Polygon(pts).minimum_rotated_rectangle.exterior.coords[:4])
+    e0, e1 = C[1] - C[0], C[2] - C[1]
+    l0, l1 = np.linalg.norm(e0), np.linalg.norm(e1)
+    uhat, L, W = (e0 / l0, l0, l1) if l0 >= l1 else (e1 / l1, l1, l0)
+    ctr = C.mean(axis=0)
+    endA, endB = ctr - uhat * L / 2, ctr + uhat * L / 2
+    if (round(endB[1], 3), round(endB[0], 3)) < (round(endA[1], 3), round(endA[0], 3)): uhat = -uhat
+    vhat = np.array([-uhat[1], uhat[0]])
+    r = dt / 2
+    vr, vl = max(W / 2 - r, 0.0), min(-W / 2 + r, 0.0)
+    un, uf = -L / 2, L / 2
+    def P(u, v): return ctr + u * uhat + v * vhat
+    def arc(cu, cv, a0, a1):
+        return [P(cu + r * np.cos(np.radians(a)), cv + r * np.sin(np.radians(a)))
+                for a in np.linspace(a0, a1, 7)]
+    loop = (arc(un, W / 2, 180, 270) + [P(uf, vr)] + arc(uf, W / 2, 270, 360)
+            + [P(uf + r, -W / 2)] + arc(uf, -W / 2, 0, 90) + [P(un, vl)] + arc(un, -W / 2, 90, 180))
+    step = min(0.5 * dt, pk.depth) or pk.depth
+    levels = np.arange(pk.floor_z + pk.depth - step, pk.floor_z, -step).tolist() + [pk.floor_z]
+    x0, y0 = loop[0]
+    p.line(f"G17 G0 G90 X{num(x0)} Y{num(y0)} S0 M3")
+    p.line(f"G43 Z{num(zc)} H0")
+    for z in levels:
+        p.line(f"G0 X{num(x0)} Y{num(y0)}")
+        p.line(f"G94 G1 Z{num(z)} F250.")
+        for x, y in loop: p.line(f"G1 X{num(x)} Y{num(y)} F500.")
+    p.line(f"G0 Z{num(zc)}")
+    p.line("M5")
+    p.line("M2")
+
+def emit_pocket(p: Prog, op: Op, part: Part, zc: float, dt: float, top: float, stock=None):
     pk = op.feature
     poly = [(x, y) for x, y, _ in brep.outline(part, pk.faces[0])]
-    rings = _rings(poly, dt)
+    rings = _rings(poly, dt, stock if (pk.open_sides or 0) > 0 else None)
     if not rings: rings = [[(sum(x for x, _ in poly) / len(poly), sum(y for _, y in poly) / len(poly))] * 2]
     step = min(0.5 * dt, pk.depth) or pk.depth
     levels = np.arange(pk.floor_z + pk.depth - step, pk.floor_z, -step).tolist() + [pk.floor_z]
@@ -153,18 +202,50 @@ def emit_pocket(p: Prog, op: Op, part: Part, zc: float, dt: float, top: float):
     p.line("M5")
     p.line("M2")
 
+# GT strategy (mined from corpus): perimeter loops inset in-plane by 2.0mm/pass,
+# whole path shifted 1.5mm horizontally downslope, z riding the face
+def _area_loops(pts):
+    from shapely.geometry import Polygon
+    P = np.array(pts, dtype=float)
+    n = np.zeros(3)
+    for a, b in zip(P, np.roll(P, -1, axis=0)): n += np.cross(a, b)
+    if np.linalg.norm(n) < 1e-9 or abs(n[2]) / np.linalg.norm(n) < 0.05: return [pts]
+    n /= np.linalg.norm(n)
+    if n[2] < 0: n = -n
+    h = np.array([n[0], n[1], 0.0])
+    hn = np.linalg.norm(h)
+    if hn < 1e-6: return [pts]
+    d = h / hn
+    e2 = np.array([-d[1], d[0], 0.0])
+    e1 = np.cross(e2, n)
+    p0 = P[0]
+    uv = [((q - p0) @ e1, (q - p0) @ e2) for q in P]
+    poly = Polygon(uv)
+    if not poly.is_valid: poly = poly.buffer(0)
+    shift = 1.5 * d
+    loops, off = [], 0.0
+    while True:
+        inner = poly.buffer(-off, join_style=2) if off else poly
+        if inner.is_empty: break
+        geoms = inner.geoms if inner.geom_type == "MultiPolygon" else [inner]
+        for g in geoms:
+            loops.append([tuple(p0 + u * e1 + v * e2 + shift) for u, v in g.exterior.coords])
+        off += 2.0
+    return loops or [pts]
+
 def emit_area_mill(p: Prog, op: Op, part: Part, zc: float):
     fid = op.extra.get("face")
     fids = [fid] if isinstance(fid, int) else op.feature.faces
-    pts = [pt for f in fids for pt in brep.outline(part, f)]
-    x0, y0, z0 = pts[0]
+    loops = [lp for f in fids for lp in _area_loops(brep.outline(part, f))]
+    x0, y0, z0 = loops[0][0]
     p.line(f"G17 G0 G90 X{num(x0)} Y{num(y0)} S1061 M3")
     p.line(f"G43 Z{num(zc)} H0")
     p.line(f"Z{num(z0 + 1)}")
     first = True
-    for x, y, z in pts:
-        p.line(f"{'G94 G1 ' if first else ''}X{num(x)} Y{num(y)} Z{num(z)}{' F250.' if first else ''}")
-        first = False
+    for lp in loops:
+        for x, y, z in lp:
+            p.line(f"{'G94 G1 ' if first else ''}X{num(x)} Y{num(y)} Z{num(z)}{' F250.' if first else ''}")
+            first = False
     p.line(f"G0 Z{num(zc)}")
     p.line("M5")
     p.line("M2")
@@ -175,8 +256,10 @@ def emit(partname: str, op: Op, found: Features, part: Part) -> str:
     p = Prog(partname, op.name, tool)
     n, feat = op.name, op.feature
     if n == "AREA_MILL": emit_area_mill(p, op, part, zc)
+    elif feat.__class__.__name__ == "Pocket" and n == "MILL_RECTANGULAR_SLOT" and (feat.open_sides or 0) >= 2:
+        emit_slot(p, op, part, zc, op.tool_diameter or 2 * (feat.fillet_radius or 5.0))
     elif feat.__class__.__name__ == "Pocket":
-        emit_pocket(p, op, part, zc, op.tool_diameter or 2 * (feat.fillet_radius or 5.0), found.top_z)
+        emit_pocket(p, op, part, zc, op.tool_diameter or 2 * (feat.fillet_radius or 5.0), found.top_z, found.stock)
     elif "GUN_DRILL" in n: emit_gun(p, op, feat, zc, op_diameter(op))
     elif n.startswith("MILL_"): emit_mill_hole(p, op, feat, zc, op_diameter(op), found.top_z)
     else: emit_cycle(p, op, feat, zc, op_diameter(op))

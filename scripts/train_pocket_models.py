@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 import pickle
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from itertools import permutations
 from pathlib import Path
 
@@ -59,9 +59,26 @@ def main() -> int:
         n += len(prs)
     print(f"kind assigned acc: {ok / n:.4f}")
 
-    md_all = RandomForestClassifier(300, n_jobs=-1, random_state=0).fit(Xd, yd)
+    # dia: RF+HGB ensemble over within-2%-merged classes; predict each group's modal dia
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    vals = sorted({float(v) for v in yd})
+    group: dict[float, float] = {}
+    for v in vals:
+        for g in group.values():
+            if abs(v - g) / min(v, g) <= 0.02: group[v] = g; break
+        else: group[v] = v
+    cnt = Counter(float(v) for v in yd)
+    mode: dict[float, float] = {}
+    for v in vals:
+        g = group[v]
+        if g not in mode or cnt[v] > cnt[mode[g]]: mode[g] = v
+    yg = np.array([group[float(v)] for v in yd]).astype(str)
+    rf_all = RandomForestClassifier(300, n_jobs=-1, random_state=0).fit(Xd, yg)
+    hg_all = HistGradientBoostingClassifier(max_iter=600, learning_rate=0.08, max_leaf_nodes=63,
+                                            l2_regularization=1.0, random_state=0,
+                                            early_stopping=False).fit(Xd, yg)
     mk_all = RandomForestClassifier(300, n_jobs=-1, random_state=0).fit(Xk, yk)
-    pickle.dump(md_all, open("derived/pocket_tool_model.pkl", "wb"))
+    pickle.dump({"rf": rf_all, "hgb": hg_all, "mode": mode}, open("derived/pocket_tool_model.pkl", "wb"))
     pickle.dump(mk_all, open("derived/pocket_kind_model.pkl", "wb"))
     print("saved production models")
     return 0

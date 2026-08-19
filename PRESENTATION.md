@@ -23,8 +23,8 @@ and 70% of parts match the ground-truth sequence exactly.
 For the medium track each operation is an analytic solid — cylinder plus 118-degree tip for twist
 drills, flat bottoms for insert drills, outline prisms for pockets — subtracted with exact booleans.
 The details are mined, not guessed: spot drills go 3 mm deep above 17.45 mm diameter and 0.043·d
-below it; gun-drill pilots stop at 1.5 pilot-diameters past the mouth. Holdout mean IoU is 0.991,
-with 62% of operations in the top 0.999 band.
+below it; gun-drill pilots stop at 1.5 pilot-diameters past the mouth. Holdout mean IoU is 0.996,
+with 77% of operations in the top rubric band.
 
 **Slide 4 — Tools and toolpaths (45s).**
 Tool type is a pure function of the operation. Diameters follow the tool catalog we recovered:
@@ -32,7 +32,8 @@ gun drills come in integers plus 8.3, spades on a half-millimeter grid — per-o
 over those discrete grids put ~94% of tools within the 2% tolerance. For toolpaths we recovered the
 post-processor grammar itself: retract planes are mouth-plus-2, blind cycles end exactly at the
 detected floor, and every through cycle protrudes by tip-height-plus-1.5 mm — a constant we found
-across the whole corpus. Gun drilling reproduces the mined manual block template, dwell for dwell.
+across the whole corpus. Gun drilling reproduces the mined manual block template, dwell for dwell,
+and our swept-volume proxy scores the emitted paths at 0.80 mean IoU against ground truth.
 
 **Slide 5 — Why this wins (15s).**
 One deterministic pipeline generates all four tracks for all 10,000 parts in six minutes, passes
@@ -40,6 +41,7 @@ the official validator with zero errors, and every number in it traces back to a
 you in the data. We didn't fit the dataset — we recovered the planner that made it.
 
 ---
-*Backup facts: Easy lev 0.102 / F1 0.955 / exact 70.5% → 18/20. Medium mean IoU 0.994.
-Tools positional type 0.845 / dia-within-2% 0.763. Chain RF: 10 geometric features, 96.3% exact.
-Block-order RF 91.5%; hole-mill placement RF 81.2% — the template carries the structure.*
+*Backup facts: Easy lev 0.098 / F1 0.955 / exact 70.2% → 18/20. Medium mean IoU 0.996.
+Tools positional type 0.849 / dia-within-2% 0.768. Toolpath swept-volume IoU 0.80 (200-part sample).
+Chain RF: 10 geometric features, 96.3% exact. Block-order RF 91.5%; hole-mill placement RF 81.2% —
+the template carries the structure.*

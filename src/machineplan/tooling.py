@@ -63,7 +63,12 @@ def pocket_dias(ps: list) -> list[float]:
     m = pocket_model()
     if not ps: return []
     if not m or any(p.w <= 0 for p in ps): return [pocket_tool_dia(p) for p in ps]
-    return [float(v) for v in m.predict(pocket_dia_X(ps))]
+    X = pocket_dia_X(ps)
+    if isinstance(m, dict):
+        proba = m["rf"].predict_proba(X) + m["hgb"].predict_proba(X)
+        cls = m["rf"].classes_.astype(float)
+        return [m["mode"][cls[i]] for i in proba.argmax(1)]
+    return [float(v) for v in m.predict(X)]
 
 _PREBORE: object = None
 def prebore_mill_dia(fd: float) -> float:
@@ -85,6 +90,18 @@ def gun_pilot(gun_dia: float, final_dia: float) -> float | None:
         p = Path(__file__).resolve().parents[2] / "derived/gun_pilot_lookup.json"
         _GP = json.loads(p.read_text()) if p.exists() else {}
     return _GP.get(f"{round(gun_dia, 2)}|{round(final_dia, 1)}")
+
+_CLUT: dict | None = None
+def chain_dias(names: list[str], final_d: float) -> list[float] | None:
+    """Modal GT dia vector for a whole hole chain, keyed on (chain, final dia)."""
+    global _CLUT
+    if _CLUT is None:
+        import json
+        from pathlib import Path
+        p = Path(__file__).resolve().parents[2] / "derived/chain_dia_lookup.json"
+        _CLUT = json.loads(p.read_text()) if p.exists() else {}
+    v = _CLUT.get(f"{'>'.join(names)}|{round(final_d, 1)}")
+    return list(v) if v and len(v) == len(names) else None
 
 def hole_tool_dia(name: str, h: Hole, found: Features, pos: int, chain_len: int) -> float:
     if name == "SPOT_DRILL": return 12.0

@@ -38,8 +38,10 @@ class Op:
 
 # one AREA_MILL per chamfer face (exact on 10k)
 def chamfer_ops(found: Features) -> list[Op]:
-    return [Op("AREA_MILL", feature=c, tool_type="chamfer_mill", tool_diameter=20.0, extra={"face": f})
-            for c in found.chamfers for f in (c.faces or [None])]
+    ops = [Op("AREA_MILL", feature=c, tool_type="chamfer_mill", tool_diameter=20.0, extra={"face": f})
+           for c in found.chamfers for f in (c.faces or [None])]
+    # GT orders chamfer ops by face id globally, not grouped by chamfer
+    return sorted(ops, key=lambda o: (o.extra["face"] is None, o.extra["face"]))
 
 _PKIND: object = None
 def pocket_kind_model():
@@ -132,20 +134,28 @@ def hole_chains(found: Features) -> list[list[Op]]:
 
 def assign_tools(ops: list[Op], found: Features) -> None:
     from . import tooling
-    for i, o in enumerate(ops):
-        o.tool_diameter = tooling.hole_tool_dia(o.name, o.feature, found, i, len(ops))
-        o.tool_type = tooling.tool_type(o.name)
-    # hole mills cut at the hole dia, except a pre-bore rough mill which undersizes
-    has_bore = any(o.name == "BORE_BLIND_HOLE" for o in ops)
-    for o in ops:
-        if o.name.startswith("MILL_ROUGH_BLIND_HOLE"): o.tool_diameter = o.feature.diameter
-        elif o.name.startswith("MILL_BLIND_HOLE_FROM_SOLID"):
-            o.tool_diameter = tooling.prebore_mill_dia(o.feature.diameter) if has_bore else o.feature.diameter
+    lut = tooling.chain_dias([o.name for o in ops], ops[0].feature.diameter) if ops else None
+    if lut:
+        for o, d in zip(ops, lut, strict=True):
+            o.tool_diameter = d
+            o.tool_type = tooling.tool_type(o.name)
+        if "MILL" not in ops[-1].name:  # drill/bore finals cut the exact hole dia; mill finals use lib tools
+            ops[-1].tool_diameter = ops[-1].feature.diameter
+    else:
+        for i, o in enumerate(ops):
+            o.tool_diameter = tooling.hole_tool_dia(o.name, o.feature, found, i, len(ops))
+            o.tool_type = tooling.tool_type(o.name)
+        # hole mills cut at the hole dia, except a pre-bore rough mill which undersizes
+        has_bore = any(o.name == "BORE_BLIND_HOLE" for o in ops)
+        for o in ops:
+            if o.name.startswith("MILL_ROUGH_BLIND_HOLE"): o.tool_diameter = o.feature.diameter
+            elif o.name.startswith("MILL_BLIND_HOLE_FROM_SOLID"):
+                o.tool_diameter = tooling.prebore_mill_dia(o.feature.diameter) if has_bore else o.feature.diameter
     for i, o in enumerate(ops[:-1]):
         if o.name != "SPOT_DRILL": o.extra["pilot"] = True
     pilots = [o for o in ops if o.name == "DRILL_BLIND_HOLE_INTO_CENTER"]
     gun = next((o for o in ops if "GUN_DRILL" in o.name), None)
-    if gun and pilots and gun.tool_diameter and ops[-1].tool_diameter:
+    if gun and pilots and not lut and gun.tool_diameter and ops[-1].tool_diameter:
         d = tooling.gun_pilot(gun.tool_diameter, ops[-1].tool_diameter)
         if d: pilots[0].tool_diameter = d
     for o in ops:

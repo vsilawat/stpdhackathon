@@ -14,10 +14,10 @@ organizers' `validate_submission.py` with zero errors.
 
 | Track | Points | Holdout result |
 |---|---|---|
-| Easy | 20 | mean normalized Levenshtein **0.102**, set-F1 **0.955**, exact sequence 70.5% |
-| Medium | 35 | mean IPW IoU **0.995** |
-| Hard: tools | 20 | positional tool type 84.5%, diameter within 2%: 76.8% |
-| Hard: toolpath | 25 | mined post-processor grammar; cycle match 1.00 on sampled ops |
+| Easy | 20 | mean normalized Levenshtein **0.098**, set-F1 **0.955**, exact sequence 70.2% |
+| Medium | 35 | mean IPW IoU **0.996** |
+| Hard: tools | 20 | positional tool type 84.9%, diameter within 2%: 76.8% |
+| Hard: toolpath | 25 | mined post-processor grammar; estimated swept-volume IoU **0.80** on a 200-part sample |
 
 ```bash
 .venv/bin/python scripts/generate_submission.py   # writes submission/{easy,medium,hard_tools,hard_ptp}

@@ -37,7 +37,7 @@ Hole-milling ops glue to the end of whichever block comes first (100% when drill
 boring follows its hole's mill. Two random forests over 23 part-level features decide the residual
 choices: block order (**91.5%** holdout) and hole-mill placement (**81.2%** vs 67.6% base rate).
 The template itself — not the classifier — carries the structure.
-Holdout: **mean lev 0.102, set-F1 0.955, exact-sequence 70.5%**.
+Holdout: **mean lev 0.098, set-F1 0.955, exact-sequence 70.2%**.
 
 ## 3. IPW solids — Medium track
 
@@ -49,7 +49,7 @@ subtracted in sequence from the stock with exact booleans (manifold3d). Mined de
 - gun-drill pilot: twist drill to `mouth − 1.5·pilot_d`
 - through holes cut to stock bottom; blind cycles end exactly at the detected floor
 
-Holdout: mean IoU 0.991; 62% of ops in the ≥0.999 band.
+Holdout: mean IoU 0.996; 77% of sampled ops land in the top rubric band.
 
 ## 4. Tools — Hard track
 
@@ -58,7 +58,9 @@ spade_drill, insert_drill, boring_tool, end_mill, chamfer_mill). Tool diameter f
 catalog rules: final-cut ops use the hole diameter itself; spot drills are always ⌀12; pocket
 end mills are 2× the corner fillet radius; intermediate drills come from per-operation
 classifiers over a **discrete tool-size grid** (gun drills: integers + 8.3 mm; spades: 0.5 mm
-grid; pilots: 0.1 mm grid) — ≈94% of tools within the 2% diameter tolerance on holdout.
+grid; pilots: 0.1 mm grid), refined by a chain-keyed diameter lookup mined from the training
+split — ≈94% of tools within the 2% diameter tolerance on holdout when the sequence matches
+(positional: type 84.9%, diameter 76.8%).
 
 ## 5. Toolpaths — Hard track
 
@@ -74,7 +76,12 @@ N-numbers step by 2, `T00 M6 / G54` preamble, `G43 Z(top+10)` clearance, canned 
 - peck cycles (G73): Q = 0.94·tool_d
 - gun drilling is a manual block sequence (S716, F125/F250 phases, three G4 dwells) reproduced
   from the mined template; milling ops emit inward-offset contour rings (shapely) at 0.65·d
-  stepover.
+  stepover, open slots use the mined NX slot template (rails at wall+r with corner pivot arcs
+  and a far-end cross pass), and chamfer area-mills follow the mined 2 mm-inset perimeter-loop
+  strategy.
+
+A swept-volume IoU proxy (1 mm heightfield columns, arc-aware G-code parser) estimates
+**mean per-op IoU 0.80** against ground-truth toolpaths on a 200-part holdout sample.
 
 ## 6. Validation discipline
 
