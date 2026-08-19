@@ -1,14 +1,3 @@
-"""Score the baseline against the true NX process plans on held-out parts.
-
-Metrics, in plain terms:
-
-  step F1       did we list the right machining steps? (order ignored)
-  tool F1       did we pick the right cutting tools?   (order ignored)
-  count error   did we get the number of steps right?
-  sequence      how close is our ordering to the real one
-                (1.0 = identical, 0.0 = nothing in common)
-  exact match   fraction of parts where the whole plan is perfect
-"""
 import collections, csv, json, os, re, statistics, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -28,7 +17,6 @@ def multiset_f1(pred, true):
 
 
 def seq_similarity(a, b):
-    """1 - normalised edit distance between two step sequences."""
     if not a and not b:
         return 1.0
     prev = list(range(len(b) + 1))
@@ -72,7 +60,6 @@ def main():
         m["count_err"].append(len(pn) - len(tn))
         m["abs_count_err"].append(abs(len(pn) - len(tn)))
         m["exact"].append(1.0 if pn == tn else 0.0)
-        # per-target breakdowns
         m["chamfer_ok"].append(
             1.0 if pn.count("AREA_MILL") == tn.count("AREA_MILL") else 0.0)
         drill_p = [x for x in pn if model["is_drill"].get(x)]

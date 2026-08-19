@@ -1,11 +1,3 @@
-"""Self-consistency check for generated prediction files.
-
-This does NOT validate against the organizers' submission spec (we do not have
-it). It checks that our output is internally coherent and uses only vocabulary
-that actually occurs in the dataset, so that our own bugs are ruled out.
-
-Every check reports PASS/FAIL with a count and a couple of examples.
-"""
 import collections, csv, glob, json, math, os, re, sys
 
 ROOT = "/Users/vasusilawat/Desktop/stpd/data/MachinePlan-10K"
@@ -32,7 +24,6 @@ def check(name, bad, total, examples=()):
 def main():
     print(f"checking {PRED}\n")
 
-    # ---- reference vocabularies, taken from the real dataset --------------
     true_names, true_types, true_tools = set(), set(), set()
     for r in csv.DictReader(open(os.path.join(DER, "operations.csv"))):
         true_names.add(r["base_name"]); true_types.add(r["type"])
@@ -52,7 +43,6 @@ def main():
           sorted(missing))
     check("no unexpected prediction files", len(extra), len(got), sorted(extra))
 
-    # ---- parse everything -------------------------------------------------
     print("\n=== STRUCTURE ===")
     docs, unreadable = {}, []
     for f in files:
@@ -100,7 +90,6 @@ def main():
                 bad_time.append(f"{pid}: {n} time={tm!r}")
             else:
                 tot += tm
-            # NX suffix convention: first instance bare, then _1, _2, ...
             want = base if seen[base] == 0 else f"{base}_{seen[base]}"
             if n != want:
                 bad_suffix.append(f"{pid}: got {n!r}, expected {want!r}")
@@ -137,7 +126,6 @@ def main():
     check("name suffixing follows NX convention", len(bad_suffix), None,
           bad_suffix)
 
-    # ---- distribution sanity vs the real dataset -------------------------
     print("\n=== PLAUSIBILITY vs REAL DATA ===")
     real = [int(r["num_operations"]) for r in
             csv.DictReader(open(os.path.join(DER, "parts.csv")))]

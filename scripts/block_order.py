@@ -1,13 +1,3 @@
-"""Predict whether a part's plan starts with drilling or with milling.
-
-On parts containing both kinds of work, NX puts each kind in a contiguous block
-(93.3% of parts) but the order between the two blocks is close to a coin flip
-(59/41). Getting it right is worth up to 4 rubric points on the Easy track,
-because it roughly halves the normalized Levenshtein distance.
-
-Fits a small logistic regression on geometric features. Pure Python -- no
-third-party dependencies, consistent with the rest of the pipeline.
-"""
 import json, math, os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -15,22 +5,17 @@ from step_parse import parse
 from baseline import (ROOT, DER, load_ops, load_model, milled_features,
                       fillet_clusters, build_plan, plan_composition)
 
-# Ranked by single-feature AUC on the training split. `min_hole_depth` --
-# the depth of the SHALLOWEST hole -- is by far the strongest single signal
-# (AUC 0.88); max hole depth alone is much weaker (0.69).
 FEATURES = [
     "min_hole_depth", "min_hole_dia", "hole_minus_feat_depth",
     "max_hole_depth_over_h", "max_hole_depth", "aspect", "n_distinct_hole_dia",
     "deepest_is_hole", "max_feat_depth_over_h", "n_sunk", "n_holes",
     "max_feat_depth", "n_feats", "n_fillet", "n_flooronly", "n_cham",
     "max_hole_dia", "max_feat_dia", "hole_frac", "log_vol", "part_height",
-    # composition of the predicted (unordered) plan -- known before ordering
     "n_drill_ops", "n_mill_ops", "drill_op_frac", "n_ops",
 ]
 
 
 def extract(p):
-    """Geometric features for one parsed part."""
     up = [f["origin"][2] for f in p.faces
           if f["kind"] == "plane" and f.get("axis") and f.get("origin")
           and abs(abs(f["axis"][2]) - 1) < 1e-6 and f["axis"][2] > 0]
@@ -91,7 +76,6 @@ def extract(p):
 
 
 def fit_logistic(X, y, epochs=400, lr=0.2, l2=1e-3):
-    """Plain batch gradient descent on standardized features."""
     d = len(X[0])
     mu = [sum(r[j] for r in X) / len(X) for j in range(d)]
     sd = [math.sqrt(sum((r[j] - mu[j]) ** 2 for r in X) / len(X)) or 1.0
@@ -116,10 +100,6 @@ def fit_logistic(X, y, epochs=400, lr=0.2, l2=1e-3):
     return {"w": w, "b": b, "mu": mu, "sd": sd, "features": FEATURES}
 
 
-# ---------------------------------------------------------------------------
-# gradient-boosted stumps -- tabular data with threshold effects (e.g. "is the
-# shallowest hole deeper than X") suits trees better than a linear model
-# ---------------------------------------------------------------------------
 def _bin_edges(col, nbins=32):
     vals = sorted(set(col))
     if len(vals) <= nbins:
@@ -129,7 +109,6 @@ def _bin_edges(col, nbins=32):
 
 
 def _best_split(rows, grad, feats_idx, B, edges):
-    """Best (feature, threshold) by squared-error reduction on the gradient."""
     n = len(rows)
     if n < 20:
         return None
@@ -241,7 +220,7 @@ def main():
             kinds = [("d" if o["op_type"] == "Drilling" else "m")
                      for o in by_part[pid]]
             if "d" not in kinds or "m" not in kinds:
-                continue          # only mixed parts have an order to choose
+                continue
             try:
                 p = parse(f)
             except Exception:
@@ -265,8 +244,6 @@ def main():
                    if (predict_drill_first(c, dict(zip(FEATURES, x))) >= 0.5) == t) \
             / len(yv)
 
-    # Select hyperparameters on an inner split of TRAIN, never on val, so the
-    # reported val accuracy stays an honest estimate.
     cut = int(0.8 * len(Xtr))
     Xa, ya, Xb, yb = Xtr[:cut], ytr[:cut], Xtr[cut:], ytr[cut:]
 
@@ -289,8 +266,6 @@ def main():
             best_cfg, best_dev = (rounds, lr, depth), a
     print(f"  -> best config {best_cfg} (dev {100*best_dev:.1f}%)")
 
-    # Ensemble the top configs by dev score -- averaging decorrelated models
-    # is a cheap and reliable way to buy the last point of accuracy.
     ranked = sorted(dev_scores, key=lambda kv: -kv[1])[:3]
     members = [fit_gbm(Xtr, ytr, rounds=r, lr=l, depth=d)
                for (r, l, d), _ in ranked]

@@ -1,14 +1,3 @@
-"""Decode the NX tool-selection rules recorded in each operation card.
-
-Every operation stores the literal tool-library `Query` NX evaluated to pick its
-tool. This script asks the question that decides how we model tool selection:
-
-    is the tool a deterministic function of the query?
-
-If yes, predicting the tool reduces to predicting the query's numeric
-constraints -- i.e. recovering the feature's dimensions from the CAD -- and the
-final lookup is exact rather than learned.
-"""
 import collections, csv, math, os, re, sys
 
 DER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "derived")
@@ -39,7 +28,6 @@ def main():
     ops = [o for o in ops if o["tool_query"]]
     print(f"operations with a recorded query: {len(ops):,}")
 
-    # ---- the decisive test -------------------------------------------------
     H_tool = entropy(collections.Counter(o["tool"] for o in ops))
     h_q = cond_entropy([(o["tool_query"], o["tool"]) for o in ops])
     print(f"\n=== IS THE TOOL DETERMINED BY THE QUERY? ===")
@@ -56,7 +44,6 @@ def main():
         q, t = next(iter(amb.items()))
         print(f"    e.g. {len(t)} tools: {sorted(t)[:6]}")
 
-    # ---- what predicates do the rules use? ---------------------------------
     preds = collections.Counter()
     for o in ops:
         preds.update(set(RE_OTHER.findall(o["tool_query"])))
@@ -64,7 +51,6 @@ def main():
     for k, c in preds.most_common():
         print(f"  {c:8,}  {100*c/len(ops):5.1f}%  DB({k})")
 
-    # ---- tool class codes --------------------------------------------------
     print(f"\n=== (Type, SubType) CLASS CODE -> tool_type ===")
     cls = collections.defaultdict(collections.Counter)
     for o in ops:
@@ -77,7 +63,6 @@ def main():
         kinds = ", ".join(f"{n} ({c:,})" for n, c in cls[k].most_common(3))
         print(f"  Type={k[0]} SubType={k[1]}  n={tot:7,}  -> {kinds}")
 
-    # ---- does the diameter bound equal the chosen tool diameter? -----------
     print(f"\n=== DIAMETER CONSTRAINT vs CHOSEN TOOL DIAMETER ===")
     exact = near = tot = 0
     gaps = []
@@ -106,7 +91,6 @@ def main():
               f"({100*near/tot:.1f}%)")
         print(f"    gap (bound - tool_dia) median  : {gaps[len(gaps)//2]:.4f} mm")
 
-    # ---- how much does the FEATURE tell you? ------------------------------
     print(f"\n=== FEATURE / OPERATION -> TOOL ===")
     def feat(g):
         return re.sub(r"_\d+$", "", g or "")

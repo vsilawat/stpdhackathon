@@ -1,14 +1,3 @@
-"""Validate the link between STEP B-rep geometry and the CAM labels.
-
-Three hypotheses, checked across a sample of parts:
-
-  H1  non-axis-aligned planar faces  <->  chamfer features (FG_CHAMFER_SURFACE)
-  H2  cylindrical faces              <->  hole features   (STEP1HOLE)
-  H3  cylinder diameters             <->  the diameters of the tools used
-
-If these hold, feature extraction from the B-rep is tractable with plain
-geometry and the labels are recoverable without a CAD kernel.
-"""
 import collections, csv, glob, os, re, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -51,7 +40,6 @@ def main():
                          if x["kind"] == "plane" and x.get("axis_aligned") is False)
         radii = sorted(f["radius"] for f in p.hole_cylinders())
         fillets = sorted(f["radius"] for f in p.fillet_cylinders())
-        # tool diameters actually used on this part
         tds = sorted({float(tools[g["tool"]]["diameter"])
                       for g in o if tools.get(g["tool"], {}).get("diameter")})
         rows.append({
@@ -67,7 +55,6 @@ def main():
 
     print(f"parsed {len(rows):,} parts OK\n")
 
-    # ---- H1 chamfer ------------------------------------------------------
     print("=== H1: non-axis-aligned planes <-> chamfer features ===")
     agree = sum(1 for r in rows if r["na_plane"] == r["chamfer_feat"])
     both0 = sum(1 for r in rows if r["na_plane"] == 0 == r["chamfer_feat"])
@@ -77,7 +64,6 @@ def main():
     print("  (n_planes - n_chamfer_features):",
           "  ".join(f"{k:+d}:{v}" for k, v in sorted(d.items())[:9]))
 
-    # ---- H2 holes --------------------------------------------------------
     print("\n=== H2: CLOSED cylindrical faces <-> hole features ===")
     agree2 = sum(1 for r in rows if r["cyl"] == r["hole_feat"])
     print(f"  closed-cyl count == n hole features: "
@@ -89,7 +75,6 @@ def main():
           f"{sum(r['fillet'] for r in rows):,} across "
           f"{sum(1 for r in rows if r['fillet']):,} parts")
 
-    # ---- H3 diameters ----------------------------------------------------
     print("\n=== H3: cylinder diameters vs tool diameters used ===")
     hit = tot = 0
     errs = []
@@ -110,7 +95,6 @@ def main():
               f"p10 {errs[int(.1*len(errs))]:+.3f}  median "
               f"{errs[len(errs)//2]:+.3f}  p90 {errs[int(.9*len(errs))]:+.3f} mm")
 
-    # ---- shape stats -----------------------------------------------------
     print("\n=== B-REP SIZE ===")
     fc = sorted(r["faces"] for r in rows)
     print(f"  faces per part: min {fc[0]}  median {fc[len(fc)//2]}  "

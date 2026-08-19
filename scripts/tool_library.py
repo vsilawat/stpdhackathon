@@ -1,17 +1,9 @@
-"""Build the tool catalog + cutting-parameter table from the `*_details.txt` cards.
-
-Each operation ships an NX operation card containing the tool's library entry
-(geometry, material), the feed rates, and the literal tool-library `Query` that
-NX used to choose it. This reconstructs the closed tool vocabulary and records
-the selection rule per operation.
-"""
 import collections, csv, glob, json, os, re, sys
 
 ROOT = sys.argv[1] if len(sys.argv) > 1 else \
     "/Users/vasusilawat/Desktop/stpd/data/MachinePlan-10K"
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "derived")
 
-# "(D) Diameter         =      18.500000000 mm"  /  "Number of Flute      2"
 NUM = r"([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)"
 FIELDS = {
     "diameter":     re.compile(r"\(D\) Diameter\s*=\s*" + NUM),
@@ -68,7 +60,6 @@ def main():
         stem = os.path.basename(f)[: -len("_details.txt")]
         seq, tool = stem.split("_", 1)
 
-        # tool library entry (first "Template Subtype" after the Tool block)
         tblock = txt.split("Tool  Information", 1)
         tb = tblock[1] if len(tblock) > 1 else txt
         rec = {k: g(rx, tb) for k, rx in FIELDS.items()}
@@ -86,9 +77,6 @@ def main():
             tools.setdefault(tool + "  [INCONSISTENT]", rec)
 
         q = RE_QUERY.search(txt)
-        # NX hard-wraps the query at a fixed column, splitting mid-token
-        # ("DB(Diamete\nr)"), so drop the newlines outright instead of
-        # collapsing them to spaces.
         qs = re.sub(r"[ \t]+", " ",
                     re.sub(r"\n", "", q.group(1))).strip() if q else None
         if qs:

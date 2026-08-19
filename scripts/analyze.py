@@ -1,13 +1,3 @@
-"""Aggregate analysis of MachinePlan-10K process plans.
-
-Reads every `*_operations.json`, flattens to a CSV of operations, and reports
-the label vocabularies plus the structural questions that decide how to model
-the problem:
-
-  * how big is the operation / tool label space?
-  * how deterministic is tool choice given the operation?
-  * is the operation ORDER canonical (a sortable rule) or genuinely learned?
-"""
 import collections, csv, glob, json, math, os, re, sys
 
 ROOT = sys.argv[1] if len(sys.argv) > 1 else \
@@ -18,7 +8,6 @@ SUFFIX = re.compile(r"_\d+$")
 
 
 def base_name(n):
-    """SPOT_DRILL_2 -> SPOT_DRILL  (NX appends _1.._n to repeated instances)."""
     return SUFFIX.sub("", n)
 
 
@@ -28,7 +17,6 @@ def entropy(counter):
 
 
 def cond_entropy(pairs):
-    """H(Y|X) in bits, over (x, y) pairs."""
     by_x = collections.defaultdict(collections.Counter)
     for x, y in pairs:
         by_x[x][y] += 1
@@ -99,7 +87,6 @@ def main():
     print(f"\n  raw 'name' values (unstripped): "
           f"{len(set(r['name'] for r in rows)):,}")
 
-    # --- how determined is the tool by the operation? ---
     print("\n=== PREDICTABILITY (bits; 0 = fully determined) ===")
     H_tool = entropy(tools)
     print(f"  H(tool)                    = {H_tool:.3f}")
@@ -110,14 +97,12 @@ def main():
     h = cond_entropy([((r["base_name"], r["type"]), r["tool"]) for r in rows])
     print(f"  H(tool | name,type)        = {h:.3f}")
 
-    # deterministic operations
     by_op = collections.defaultdict(collections.Counter)
     for r in rows:
         by_op[r["base_name"]][r["tool"]] += 1
     det = [k for k, c in by_op.items() if len(c) == 1]
     print(f"\n  operations with exactly ONE tool ever: {len(det)}/{len(by_op)}")
 
-    # --- is the order canonical? ---
     print("\n=== ORDERING STRUCTURE ===")
     by_part = collections.defaultdict(list)
     for r in rows:
@@ -140,7 +125,6 @@ def main():
     for (a, b), c in pair.most_common(20):
         print(f"    {c:6,}  {a} -> {b}")
 
-    # do types appear in contiguous blocks following a fixed global order?
     grouped = sum(
         1 for v in by_part.values()
         if len({r["type"] for r in v}) ==
@@ -149,14 +133,12 @@ def main():
     print(f"\n  parts where each type forms ONE contiguous block: "
           f"{grouped:,}/{len(by_part):,} ({100*grouped/len(by_part):.1f}%)")
 
-    # monotone IPW volume check
     bad = sum(1 for v in by_part.values()
               if any(a["vol_after_mm3"] is not None and b["vol_after_mm3"] is not None
                      and b["vol_after_mm3"] > a["vol_after_mm3"] + 1e-6
                      for a, b in zip(v, v[1:])))
     print(f"  parts with non-monotone IPW volume: {bad:,} (expect 0)")
 
-    # --- distributions ---
     ncnt = collections.Counter(p["num_operations"] for p in per_part)
     print("\n=== OPERATIONS PER PART ===")
     ks = sorted(ncnt)

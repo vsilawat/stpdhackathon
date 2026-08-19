@@ -1,29 +1,3 @@
-"""Rule-based CAM process-plan baseline for MachinePlan-10K.
-
-Design principle: reproduce the parts of the NX pipeline we have *confirmed*
-deterministic, and fall back on learned priors only where geometry extraction is
-still unsolved.
-
-  confirmed exact
-    - chamfer features  == non-axis-aligned planar faces (1500/1500 parts)
-    - every chamfer      -> one AREA_MILL with chamfer mill UGT0205_001
-    - holes              == closed (360 deg) cylindrical faces
-    - hole diameter      == the diameter of the tool that made it (0.000 mm)
-    - operation name     -> tool class (Type, SubType), 100%
-
-  recovered by alignment
-    - each drilling/cylinder-milling step is matched to the hole it cuts via
-      the X/Y positions in its G-code, giving true per-hole operation chains
-    - pockets/slots/notches are recovered by clustering endmill corner fillets
-      (same radius, height and depth); the fillet radius is the endmill radius
-
-  learned prior
-    - (diameter, through/blind, depth band) -> operation chain, with back-off
-
-Usage
-    python3 scripts/baseline.py fit
-    python3 scripts/baseline.py predict <part_id>
-"""
 import collections, csv, json, os, re, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -36,10 +10,8 @@ MODEL = os.path.join(DER, "baseline_model.json")
 HOLE_FAMS = {"STEP1HOLE", "HOLE_FREE_SHAPED_STRAIGHT"}
 CHAMFER_FAMS = {"FG_CHAMFER_SURFACE"}
 
-# Operation kinds that target a hole rather than an area.
 HOLE_OP_TYPES = {"Drilling", "Cylinder Milling"}
 
-# NX order-group priority, used to sequence within a method block.
 ORDER_PRI = {"CENTER": 0, "DRILL": 1, "DRILL_1": 2, "DRILL_2": 3,
              "BORE": 4, "BORE_1": 5,
              "MILL_ROUGH": 0, "MILL_SEMI_FINISH": 1, "MILL_FINISH": 2}
@@ -65,7 +37,6 @@ def dia(tools, t):
 
 
 def chains_of(part_ops):
-    """Split a part's operations into per-feature chains, keyed by geometry group."""
     g = collections.OrderedDict()
     for o in part_ops:
         g.setdefault(o["geometry_group"], []).append(o)
@@ -76,7 +47,6 @@ RE_XY = re.compile(r"X(-?[\d.]+)\s+Y(-?[\d.]+)")
 
 
 def part_holes(p):
-    """Holes from the B-rep: centre, diameter, depth, through/blind."""
     out = []
     for c in p.hole_cylinders():
         ax = c.get("axis") or (0, 0, 1)
@@ -95,13 +65,6 @@ def part_holes(p):
 
 
 def fillet_clusters(p):
-    """Group endmill corner fillets into pocket/slot/notch features.
-
-    A rectangular pocket leaves several identical partial cylinders -- same
-    radius, same height, same depth -- one at each corner. Collapsing them on
-    that signature recovers the feature, and the fillet radius *is* the radius
-    of the endmill that cut it.
-    """
     out = {}
     for c in p.fillet_cylinders():
         ax = c.get("axis") or (0, 0, 1)
@@ -115,20 +78,6 @@ def fillet_clusters(p):
 
 
 def milled_features(p, tol=1e-3):
-    """All pocket / slot / notch features on a part.
-
-    Two detectors, because neither alone is complete:
-
-      1. corner-fillet clusters -- catches enclosed pockets and notches, and
-         additionally reveals the endmill radius;
-      2. floor faces -- a horizontal face that is not the outermost one on its
-         side is the bottom of *something* cut into the part. This catches
-         through-slots, which are open at both ends and so leave no fillets.
-
-    Blind holes also have flat bottoms, so one floor is discounted per blind
-    hole. Floors already explained by a fillet cluster are discounted too, so
-    the two detectors do not double-count.
-    """
     clusters = fillet_clusters(p)
 
     up, dn = [], []
@@ -136,11 +85,10 @@ def milled_features(p, tol=1e-3):
         if f["kind"] != "plane" or not f.get("axis") or not f.get("origin"):
             continue
         ax = f["axis"]
-        if abs(abs(ax[2]) - 1.0) > 1e-6:      # horizontal faces only
+        if abs(abs(ax[2]) - 1.0) > 1e-6:
             continue
         (up if ax[2] > 0 else dn).append(f["origin"][2])
 
-    # express each floor as a depth below the surface it was cut from
     depths = []
     if up:
         top = max(up)
@@ -168,7 +116,6 @@ def milled_features(p, tol=1e-3):
 
 
 def op_positions(part_id, seq, tool):
-    """X/Y positions touched by one operation's toolpath (from its G-code)."""
     f = os.path.join(ROOT, part_id, f"{seq:03d}_{tool}.ptp")
     if not os.path.exists(f):
         return []
@@ -184,15 +131,11 @@ def depth_bucket(d):
 
 
 def split_ids(all_ids, val_frac=0.2):
-    """Deterministic split -- hash-free, just every 5th part to validation."""
     ids = sorted(all_ids)
     val = set(ids[::5]) if val_frac else set()
     return [i for i in ids if i not in val], sorted(val)
 
 
-# --------------------------------------------------------------------------
-# fit
-# --------------------------------------------------------------------------
 def _edit(a, b):
     prev = list(range(len(b) + 1))
     for i, x in enumerate(a, 1):
@@ -203,24 +146,15 @@ def _edit(a, b):
     return prev[-1]
 
 
-# The rubric scores sequences on BOTH edit distance and F1, 10 points each.
-# The pure medoid minimises edit distance but runs ~5% short on operation
-# count, which costs F1. CHAIN_ALPHA penalises deviation from the expected
-# length, trading a little edit distance for better counts.
 CHAIN_ALPHA = float(os.environ.get("CHAIN_ALPHA", "1.0"))
 
 
 def representative(counter, alpha=None):
-    """Pick a representative chain for a feature.
-
-    Minimises expected edit distance to the observed chains (the medoid),
-    plus `alpha` times the deviation from the expected chain length.
-    """
     alpha = CHAIN_ALPHA if alpha is None else alpha
     items = counter.most_common()
     if len(items) == 1:
         return items[0][0]
-    if len(items) > 24:                      # keep the medoid search cheap
+    if len(items) > 24:
         items = items[:24]
     total = sum(c for _, c in items)
     exp_len = sum(c * len(ch) for ch, c in items) / total
@@ -234,7 +168,6 @@ def representative(counter, alpha=None):
 
 
 def _merge(keyed):
-    """Merge a keyed lookup down to a single Counter."""
     out = collections.Counter()
     for c in keyed.values():
         out.update(c)
@@ -242,7 +175,6 @@ def _merge(keyed):
 
 
 def _regroup(keyed, idx):
-    """Re-key a lookup on a subset of its key components."""
     out = collections.defaultdict(collections.Counter)
     for k, c in keyed.items():
         out[tuple(k[i] for i in idx)].update(c)
@@ -258,13 +190,10 @@ def fit():
     chamfer_chain = collections.Counter()
     pocket_chain = collections.defaultdict(collections.Counter)
     slot_chain = collections.defaultdict(collections.Counter)
-    # (operation, feature diameter) -> tool. Tool choice is a deterministic
-    # function of the feature's dimensions in NX, so key it on the feature
-    # rather than inheriting whichever tool the matched example happened to use.
     op_tool = collections.defaultdict(collections.Counter)
     op_tool_any = collections.defaultdict(collections.Counter)
-    op_type = {}      # dataset JSON vocabulary (HoleDrilling, SurfaceContour, ...)
-    is_drill = {}     # operation-card vocabulary, for method-block ordering
+    op_type = {}
+    is_drill = {}
     op_order = {}
     op_time = collections.defaultdict(list)
     block_order = collections.Counter()
@@ -281,12 +210,9 @@ def fit():
             is_drill[b] = (o["op_type"] == "Drilling")
             op_tool_any[b][o["tool"]] += 1
             op_order[b] = o["order_group"]
-            # op_details `seq` is the 1-based file index; operations.csv `seq`
-            # is the 0-based JSON sequence_number.
             t = times.get((pid, int(o["seq"]) - 1))
             if t is not None:
                 op_time[b].append(t)
-        # method-block order
         blocks = [k for k, _ in __import__("itertools").groupby(
             o["method_group"] for o in pops)]
         block_order[tuple(blocks)] += 1
@@ -297,10 +223,6 @@ def fit():
                 chamfer_chain[tuple((strip(o["op_name"]), o["tool"])
                                     for o in gops)] += 1
                 continue
-        # --- drilling: align each operation to the hole it actually cuts ----
-        # The G-code carries the X/Y of every drilled position, so operations
-        # can be matched to a specific hole in the B-rep instead of guessed
-        # from diameter alone.
         f = os.path.join(ROOT, pid, pid + ".stp")
         if not os.path.exists(f):
             continue
@@ -311,8 +233,6 @@ def fit():
         holes = part_holes(p_geom)
         per_hole = collections.defaultdict(list)
         for o in pops if holes else []:
-            # Cylinder Milling also targets holes -- a hole can be milled
-            # rather than drilled -- so both kinds align to the same features.
             if o["op_type"] not in HOLE_OP_TYPES:
                 continue
             for x, y in set(op_positions(pid, int(o["seq"]), o["tool"])):
@@ -332,8 +252,6 @@ def fit():
             for _s, _n, _t in chain:
                 op_tool[(_n, k_dia)][_t] += 1
 
-        # --- pockets/slots/notches: match each milled feature to the corner
-        # fillet cluster it left behind, keyed by the endmill radius ---------
         feats = milled_features(p_geom)
         with_r = [f for f in feats if f["radius"] is not None]
         without_r = [f for f in feats if f["radius"] is None]
@@ -348,9 +266,6 @@ def fit():
                 continue
             td = max(ds)
             chain = tuple((strip(o["op_name"]), o["tool"]) for o in vb)
-            # Prefer a fillet-bearing feature whose endmill radius matches this
-            # operation's tool; otherwise this is a floor-only feature (a
-            # through-slot), which is learned by depth alone.
             best = (min(with_r, key=lambda c: abs(2 * c["radius"] - td))
                     if with_r else None)
             if best is not None and abs(2 * best["radius"] - td) <= 1.0:
@@ -373,8 +288,6 @@ def fit():
             else:
                 slot_chain[None][chain] += 1
 
-    # Three lookup levels, most specific first; predict() backs off when a
-    # part presents a hole we never saw at that depth/diameter.
     l3, l2, l1 = (collections.defaultdict(collections.Counter) for _ in range(3))
     for (d, th, db), counter in hole_chain.items():
         for ch, n in counter.items():
@@ -429,9 +342,6 @@ def fit():
     return model
 
 
-# --------------------------------------------------------------------------
-# predict
-# --------------------------------------------------------------------------
 def load_model():
     m = json.load(open(MODEL))
     m["hole_l3"] = {(float(a), bool(int(b)), None if c == "None" else int(c)):
@@ -465,12 +375,6 @@ def load_model():
 
 
 def resolve_tool(model, name, feat_dia, fallback):
-    """Pick the tool for an operation from the feature's size.
-
-    NX selects tools by querying its library on the feature's dimensions, so a
-    tool memorised from a differently-sized example is wrong even when the
-    operation is right. Re-derive it from this feature's actual diameter.
-    """
     if feat_dia is not None:
         t = model["op_tool"].get((name, round(feat_dia * 2) / 2))
         if t:
@@ -483,17 +387,8 @@ def resolve_tool(model, name, feat_dia, fallback):
 
 
 def build_plan(p, model):
-    """Unordered set of operations implied by a part's geometry.
-
-    Split out from predict() so the block-order model can use the plan's
-    composition as a feature without a circular dependency: composition is
-    known before the ordering decision is made.
-    """
     plan = []
 
-    # --- holes: one chain per closed cylinder (confirmed = one hole) --------
-    # Look up by (diameter, through/blind, depth band), backing off to less
-    # specific keys when that exact combination was never seen in training.
     l3, l2, l1 = model["hole_l3"], model["hole_l2"], model["hole_l1"]
     for h in part_holes(p):
         d, th, db = h["dia"], h["through"], depth_bucket(h["depth"])
@@ -511,19 +406,16 @@ def build_plan(p, model):
             chain = l1[min(l1, key=lambda k: abs(k - d))]
         plan += [(n, t, d, exact) for n, t in (chain or [])]
 
-    # --- chamfers: exact ---------------------------------------------------
     n_cham = sum(1 for f in p.faces
                  if f["kind"] == "plane" and f.get("axis_aligned") is False)
     plan += [(n, t, None, True) for n, t in model["chamfer_chain"]] * n_cham
 
-    # --- pockets/slots/notches --------------------------------------------
     p3, p2, p1, p0 = (model["pocket_l3"], model["pocket_l2"],
                       model["pocket_l1"], model["pocket_l0"])
     s1, s0 = model["slot_l1"], model["slot_l0"]
     for f in milled_features(p):
         db = depth_bucket(f["depth"])
         if f["radius"] is None:
-            # floor-only feature (through-slot): no endmill radius to key on
             chain = s1.get(db)
             if chain is None and s1:
                 cands = [k for k in s1 if k is not None]
@@ -550,7 +442,6 @@ def build_plan(p, model):
 
 
 def plan_composition(plan, model):
-    """Counts of drilling vs milling work in an unordered plan."""
     nd = sum(1 for n, _t, _d, _e in plan if model["is_drill"].get(n))
     nm = len(plan) - nd
     return {"n_drill_ops": float(nd), "n_mill_ops": float(nm),
@@ -559,15 +450,11 @@ def plan_composition(plan, model):
 
 
 def predict(part_id, model=None, step_path=None):
-    """Return an ordered list of {name, type, tool} for one part."""
     model = model or load_model()
     step_path = step_path or os.path.join(ROOT, part_id, part_id + ".stp")
     p = parse(step_path)
     plan = build_plan(p, model)
 
-    # --- sequence: one method block then the other, ordered by order group --
-    # Which block comes first is close to a coin flip in the data (58/42), but
-    # is predictable from geometry at ~79% -- worth up to 4 rubric points.
     drill_first = True
     if model.get("block_order"):
         from block_order import extract, predict_drill_first
@@ -592,7 +479,6 @@ def predict(part_id, model=None, step_path=None):
 
 
 def to_dataset_format(part_id, plan):
-    """Emit a plan in the same schema as the dataset's *_operations.json."""
     ops = []
     seen = collections.Counter()
     total = 0.0
@@ -624,7 +510,6 @@ def to_dataset_format(part_id, plan):
 
 
 def submit(out_dir, ids=None):
-    """Write predicted plans for every part, ready to package as a submission."""
     model = load_model()
     ids = ids or sorted(
         d for d in os.listdir(ROOT) if d.startswith("featured_part_"))

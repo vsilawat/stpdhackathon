@@ -1,11 +1,3 @@
-"""Minimal STEP AP214 reader for MachinePlan-10K.
-
-The parts use only PLANE / CYLINDRICAL_SURFACE faces bounded by LINE / CIRCLE
-edges, so a dependency-free parser is enough -- no OpenCASCADE needed.
-
-Exposes `parse(path) -> Part` with per-face geometry, which is the raw material
-for feature extraction.
-"""
 import math, re, sys
 from collections import defaultdict
 
@@ -13,7 +5,6 @@ RE_ENT = re.compile(r"#(\d+)\s*=\s*([A-Z_0-9]+)\s*\((.*)\)\s*$", re.S)
 
 
 def split_args(s):
-    """Split a STEP argument list on top-level commas."""
     out, depth, cur, instr = [], 0, [], False
     i = 0
     while i < len(s):
@@ -44,7 +35,7 @@ def split_args(s):
 class Part:
     def __init__(self, pid):
         self.part_id = pid
-        self.faces = []          # dicts: kind, radius, axis, origin
+        self.faces = []
         self.bbox = None
 
     @property
@@ -59,12 +50,10 @@ class Part:
         return sorted(f["radius"] for f in self.faces if f["kind"] == "cylinder")
 
     def hole_cylinders(self):
-        """Full 360-degree cylinders -- drilled/bored/milled holes."""
         return [f for f in self.faces
                 if f["kind"] == "cylinder" and f.get("closed")]
 
     def fillet_cylinders(self):
-        """Partial cylinders -- corner radii left by an endmill."""
         return [f for f in self.faces
                 if f["kind"] == "cylinder" and not f.get("closed")]
 
@@ -98,7 +87,6 @@ def parse(path):
         return int(a[1:]) if a.startswith("#") else None
 
     def triple(eid):
-        """CARTESIAN_POINT / DIRECTION -> (x,y,z)"""
         if eid is None or eid not in ent:
             return None
         _, args = ent[eid]
@@ -110,7 +98,6 @@ def parse(path):
             return None
 
     def placement(eid):
-        """AXIS2_PLACEMENT_3D -> (origin, axis)"""
         if eid is None or eid not in ent:
             return None, None
         _, args = ent[eid]
@@ -119,9 +106,7 @@ def parse(path):
         axis = triple(ref(a[2])) if len(a) > 2 and a[2].strip() != "$" else None
         return origin, axis
 
-    # --- topology: which edges bound each face -----------------------------
     def loop_edges(loop_id):
-        """EDGE_LOOP -> list of (start_vertex, end_vertex, curve_type)."""
         if loop_id is None or loop_id not in ent:
             return []
         typ, args = ent[loop_id]
@@ -143,7 +128,6 @@ def parse(path):
         return out
 
     def face_bounds(a):
-        """ADVANCED_FACE bound list -> flattened edge list."""
         edges = []
         inner = a[1].strip()
         for tok in split_args(inner[1:-1]):
@@ -170,14 +154,8 @@ def parse(path):
         if stype == "CYLINDRICAL_SURFACE":
             org, ax = placement(ref(sa[1]))
             edges = face_bounds(a)
-            # A full (360 deg) cylinder closes on itself: its circular edges
-            # start and end at the same vertex. A corner fillet left by an
-            # endmill is a partial arc, whose circle edges have two distinct
-            # vertices.
             circles = [e for e in edges if e[2] == "CIRCLE"]
             n_full = sum(1 for v1, v2, _, _ in circles if v1 == v2)
-            # Axial extent = spread of the bounding circles' centres measured
-            # along the cylinder axis. For a hole this is its depth.
             depth = None
             lo_hi = None
             if ax:
@@ -196,7 +174,6 @@ def parse(path):
                                "n_circle_edges": len(circles),
                                "n_full_circles": n_full,
                                "depth": depth,
-                               # extent along the cylinder axis: (bottom, top)
                                "extent": lo_hi,
                                "closed": n_full > 0})
         elif stype == "PLANE":

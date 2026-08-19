@@ -1,17 +1,3 @@
-"""Write the Hard-track tool submission: tool type and diameter per operation.
-
-Format fixed by reference/validate_submission.py:
-
-    <part_id>_tools.json
-    {"part_id": ..., "summary": {"number_of_operations": N},
-     "operations": [{"operation_number": 1, "tool_type": ...,
-                     "tool_diameter_mm": 20.0}, ...]}
-
-Our model predicts NX catalogue tool IDs. The ID encodes the tool class
-directly -- `NXT0307_003` is type 03, subtype 07 = gun drill -- and this was
-verified against the catalogue descriptions for all 431 tools with zero
-disagreements.
-"""
 import csv, json, os, re, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -21,7 +7,6 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else \
     os.path.join(DER, "..", "submission", "hard")
 VOCAB = os.path.join(DER, "..", "reference", "vocabularies.json")
 
-# NX tool library (Type, SubType) code -> the organizers' tool_type vocabulary
 CODE = {"0201": "end_mill", "0205": "chamfer_mill", "0301": "twist_drill",
         "0302": "insert_drill", "0306": "spade_drill", "0307": "gun_drill",
         "0321": "spot_drill", "0332": "boring_tool"}
@@ -46,7 +31,6 @@ def main():
     ids = sorted(d for d in os.listdir(ROOT) if d.startswith("featured_part_"))
     os.makedirs(OUT, exist_ok=True)
 
-    # fallbacks so we never emit an invalid record
     med_dia = sorted(dia.values())[len(dia) // 2]
 
     ok = skipped = bad_cat = bad_dia = 0

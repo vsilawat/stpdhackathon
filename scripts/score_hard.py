@@ -1,19 +1,3 @@
-"""Score the Hard-track tool submission against the organizers' rubric.
-
-Per operation the rubric compares tool type (must match exactly) and cutting
-diameter (relative error bands):
-
-    exact type, |d'-d|/d  0.00-0.02 -> 10
-                          0.02-0.05 ->  8
-                          0.05-0.10 ->  6
-                          0.10-0.20 ->  3
-                          > 0.20    ->  1
-    type mismatch         any       ->  0
-
-The rubric does not state how operations are aligned when the predicted and
-true sequences differ in length; we align by operation_number and score
-unmatched positions as 0, which is the conservative reading.
-"""
 import collections, csv, glob, json, os, re, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -66,7 +50,7 @@ def main():
         for i in range(n):
             tot_ops += 1
             if i >= len(pred) or i >= len(g):
-                continue                      # unmatched position scores 0
+                continue
             gt_tool = g[i][1]
             gt_type = cat.get(gt_tool)
             gt_dia = dia.get(gt_tool)
@@ -75,7 +59,7 @@ def main():
             if gt_type is None or gt_dia is None:
                 continue
             if p["tool_type"] != gt_type:
-                continue                      # wrong type -> 0 for the op
+                continue
             type_ok += 1
             by_type[gt_type][0] += 1
             rel = abs(p["tool_diameter_mm"] - gt_dia) / gt_dia

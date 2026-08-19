@@ -1,9 +1,3 @@
-"""Extract MachinePlan-10K, skipping the redundant ASCII-STL duplicates.
-
-The `*_text.stl.txt` members are plain-text copies of the binary `.stl` meshes
-and account for ~28 GB of the 35 GB uncompressed archive. Skipping them brings
-the extraction down to ~7.5 GB with no loss of information.
-"""
 import argparse, os, sys, time, zipfile
 
 DEFAULT_ZIP = "/Users/vasusilawat/Desktop/stpd/data/MachinePlan-10K.zip"

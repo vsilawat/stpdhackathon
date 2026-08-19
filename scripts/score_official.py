@@ -1,17 +1,3 @@
-"""Validate every submission file and score it against the organizers' rubric.
-
-Runs the organizers' own validate_submission.py (imported, not shelled out) over
-the whole submission, then computes the Easy-track metrics exactly as the
-rubric defines them:
-
-    normalized Levenshtein = edit_distance(P, G) / max(|P|, |G|)   (lower better)
-    F1                     = harmonic mean of precision/recall over the
-                             multiset of predicted operations
-
-and converts both to rubric points (10 each, 20 total).
-
-Scored on held-out parts only -- the training parts would flatter us.
-"""
 import collections, csv, importlib.util, json, os, sys
 from pathlib import Path
 
@@ -26,7 +12,6 @@ _spec = importlib.util.spec_from_file_location(
 _vs = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_vs)
 
-# rubric tables (lower band edge -> points)
 LEV_BANDS = [(0.1, 10), (0.2, 8), (0.3, 6), (0.4, 4), (0.5, 2), (1.01, 0)]
 F1_BANDS = [(0.95, 10), (0.85, 8), (0.75, 6), (0.65, 4), (0.55, 2), (-1, 0)]
 
@@ -83,7 +68,6 @@ def main():
         print("\n  -> fix format before scoring")
         return 1
 
-    # ---- ground truth in (o1,o2) terms ------------------------------------
     o1o2 = {k: tuple(v) for k, v in
             json.load(open(os.path.join(DER, "o1o2_map.json"))).items()}
     truth = collections.defaultdict(list)
@@ -126,7 +110,6 @@ def main():
     print(f"  (mean of per-part points    : {sum(pts)/n:.2f}/20 -- shown for"
           f" reference; the rubric's aggregation method is not specified)")
 
-    # distance to the next band up
     for hi, p_ in LEV_BANDS:
         if mlev <= hi:
             print(f"\n  Levenshtein is {mlev:.4f}; next band up needs "
