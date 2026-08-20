@@ -1,0 +1,102 @@
+{
+  "machining_summary": {
+    "total_cutting_time_min": 106.5619,
+    "total_non_cutting_time_min": 4.165,
+    "total_toolpath_time_min": 110.7269,
+    "tool_changes": 5,
+    "num_operations": 7
+  },
+  "operations": [
+    {
+      "sequence_number": 0,
+      "name": "INDEXABLE_INSERT_DRILL_BLIND_HOLE_FROM_SOLID",
+      "type": "HoleDrilling",
+      "tool_name": "NXT0302_004",
+      "toolpath_time_min": 0.28959999999999997,
+      "toolpath_cutting_time_min": 0.2879999999999999,
+      "toolpath_non_cutting_time_min": 0.0016000000000000458,
+      "toolpath_length_mm": 160.0,
+      "toolpath_cutting_length_mm": 143.99999999999997,
+      "volume_mm3": 19562384.242318343,
+      "volume_removed_mm3": 14885.697
+    },
+    {
+      "sequence_number": 1,
+      "name": "SPOT_DRILL",
+      "type": "HoleDrilling",
+      "tool_name": "NXT0321_9005460120000",
+      "toolpath_time_min": 0.028085755383659396,
+      "toolpath_cutting_time_min": 0.026685755383659398,
+      "toolpath_non_cutting_time_min": 0.0013999999999999985,
+      "toolpath_length_mm": 20.67143884591485,
+      "toolpath_cutting_length_mm": 6.6714388459148495,
+      "volume_mm3": 19562384.217952397,
+      "volume_removed_mm3": 0.0244
+    },
+    {
+      "sequence_number": 2,
+      "name": "DRILL_BLIND_HOLE_INTO_CENTER",
+      "type": "HoleDrilling",
+      "tool_name": "UGT0301_197",
+      "toolpath_time_min": 0.2512,
+      "toolpath_cutting_time_min": 0.24959999999999996,
+      "toolpath_non_cutting_time_min": 0.001600000000000018,
+      "toolpath_length_mm": 140.79999999999995,
+      "toolpath_cutting_length_mm": 124.79999999999998,
+      "volume_mm3": 19559604.523551937,
+      "volume_removed_mm3": 2779.6944
+    },
+    {
+      "sequence_number": 3,
+      "name": "AREA_MILL",
+      "type": "SurfaceContour",
+      "tool_name": "UGT0205_001",
+      "toolpath_time_min": 1.8678723834625994,
+      "toolpath_cutting_time_min": 1.8660366532113477,
+      "toolpath_non_cutting_time_min": 0.0018357302512517215,
+      "toolpath_length_mm": 484.8664658153538,
+      "toolpath_cutting_length_mm": 466.5091633028369,
+      "volume_mm3": 19555622.61183973,
+      "volume_removed_mm3": 3981.9117
+    },
+    {
+      "sequence_number": 4,
+      "name": "AREA_MILL_1",
+      "type": "SurfaceContour",
+      "tool_name": "UGT0205_001",
+      "toolpath_time_min": 9.380439518825177,
+      "toolpath_cutting_time_min": 9.364788704102725,
+      "toolpath_non_cutting_time_min": 0.01565081472245211,
+      "toolpath_length_mm": 2497.7053232501808,
+      "toolpath_cutting_length_mm": 2341.19717602567,
+      "volume_mm3": 19537271.353343267,
+      "volume_removed_mm3": 18351.2585
+    },
+    {
+      "sequence_number": 5,
+      "name": "MILL_CORNER_NOTCH_RECTANGULAR",
+      "type": "VolumeBased25DMillingOperation",
+      "tool_name": "NXT0201_009",
+      "toolpath_time_min": 85.72836912286577,
+      "toolpath_cutting_time_min": 81.6124855464645,
+      "toolpath_non_cutting_time_min": 4.115883576401274,
+      "toolpath_length_mm": 80327.0785372431,
+      "toolpath_cutting_length_mm": 39168.24277323214,
+      "volume_mm3": 19108168.160535086,
+      "volume_removed_mm3": 429103.1928
+    },
+    {
+      "sequence_number": 6,
+      "name": "MILL_RECTANGULAR_SLOT",
+      "type": "VolumeBased25DMillingOperation",
+      "tool_name": "UGT0201_094",
+      "toolpath_time_min": 13.181312197698686,
+      "toolpath_cutting_time_min": 13.154293097603434,
+      "toolpath_non_cutting_time_min": 0.027019100095252213,
+      "toolpath_length_mm": 6799.337549754202,
+      "toolpath_cutting_length_mm": 6529.14654880171,
+      "volume_mm3": 18771578.631650526,
+      "volume_removed_mm3": 336589.5289
+    }
+  ]
+}

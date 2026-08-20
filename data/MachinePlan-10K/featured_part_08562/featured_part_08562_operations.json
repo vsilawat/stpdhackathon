@@ -1,0 +1,50 @@
+{
+  "machining_summary": {
+    "total_cutting_time_min": 100.0622,
+    "total_non_cutting_time_min": 2.1908,
+    "total_toolpath_time_min": 102.253,
+    "tool_changes": 1,
+    "num_operations": 3
+  },
+  "operations": [
+    {
+      "sequence_number": 0,
+      "name": "AREA_MILL",
+      "type": "SurfaceContour",
+      "tool_name": "UGT0205_001",
+      "toolpath_time_min": 23.29376008772978,
+      "toolpath_cutting_time_min": 23.289991456246625,
+      "toolpath_non_cutting_time_min": 0.0037686314831546497,
+      "toolpath_length_mm": 5860.184178893214,
+      "toolpath_cutting_length_mm": 5822.497864061656,
+      "volume_mm3": 31294845.573203653,
+      "volume_removed_mm3": 102017.4176
+    },
+    {
+      "sequence_number": 1,
+      "name": "AREA_MILL_1",
+      "type": "SurfaceContour",
+      "tool_name": "UGT0205_001",
+      "toolpath_time_min": 39.14522983850363,
+      "toolpath_cutting_time_min": 39.14086263378311,
+      "toolpath_non_cutting_time_min": 0.004367204720523432,
+      "toolpath_length_mm": 9828.887705650965,
+      "toolpath_cutting_length_mm": 9785.215658445784,
+      "volume_mm3": 31104037.010951515,
+      "volume_removed_mm3": 190808.5623
+    },
+    {
+      "sequence_number": 2,
+      "name": "MILL_CORNER_NOTCH_RECTANGULAR",
+      "type": "VolumeBased25DMillingOperation",
+      "tool_name": "NXT0201_011",
+      "toolpath_time_min": 39.813984944544785,
+      "toolpath_cutting_time_min": 37.631321544346775,
+      "toolpath_non_cutting_time_min": 2.1826634001980096,
+      "toolpath_length_mm": 39784.29477415383,
+      "toolpath_cutting_length_mm": 17957.66077217336,
+      "volume_mm3": 30692547.587680575,
+      "volume_removed_mm3": 411489.4233
+    }
+  ]
+}

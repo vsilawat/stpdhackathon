@@ -1,0 +1,115 @@
+{
+  "machining_summary": {
+    "total_cutting_time_min": 236.4112,
+    "total_non_cutting_time_min": 0.1609,
+    "total_toolpath_time_min": 236.5721,
+    "tool_changes": 6,
+    "num_operations": 8
+  },
+  "operations": [
+    {
+      "sequence_number": 0,
+      "name": "SPOT_DRILL",
+      "type": "HoleDrilling",
+      "tool_name": "NXT0321_9005460120000",
+      "toolpath_time_min": 0.0,
+      "toolpath_cutting_time_min": 0.0,
+      "toolpath_non_cutting_time_min": 0.0,
+      "toolpath_length_mm": 0.0,
+      "toolpath_cutting_length_mm": 0.0,
+      "volume_mm3": 14154477.064459743,
+      "volume_removed_mm3": 1.2384
+    },
+    {
+      "sequence_number": 1,
+      "name": "DRILL_BLIND_HOLE_INTO_CENTER",
+      "type": "HoleDrilling",
+      "tool_name": "NXT0301_030",
+      "toolpath_time_min": 0.0,
+      "toolpath_cutting_time_min": 0.0,
+      "toolpath_non_cutting_time_min": 0.0,
+      "toolpath_length_mm": 0.0,
+      "toolpath_cutting_length_mm": 0.0,
+      "volume_mm3": 14154477.064459743,
+      "volume_removed_mm3": 0.0
+    },
+    {
+      "sequence_number": 2,
+      "name": "INDEXABLE_INSERT_DRILL_BLIND_HOLE_FROM_SOLID",
+      "type": "HoleDrilling",
+      "tool_name": "NXT0302_003",
+      "toolpath_time_min": 0.15239999999999998,
+      "toolpath_cutting_time_min": 0.1508,
+      "toolpath_non_cutting_time_min": 0.0015999999999999903,
+      "toolpath_length_mm": 91.39999999999999,
+      "toolpath_cutting_length_mm": 75.39999999999999,
+      "volume_mm3": 14147353.626518032,
+      "volume_removed_mm3": 7123.4379
+    },
+    {
+      "sequence_number": 3,
+      "name": "AREA_MILL",
+      "type": "SurfaceContour",
+      "tool_name": "UGT0205_001",
+      "toolpath_time_min": 6.183052709905233,
+      "toolpath_cutting_time_min": 6.18262841599369,
+      "toolpath_non_cutting_time_min": 0.0004242939115428612,
+      "toolpath_length_mm": 1549.900043113851,
+      "toolpath_cutting_length_mm": 1545.657103998423,
+      "volume_mm3": 14135165.567264529,
+      "volume_removed_mm3": 12188.0593
+    },
+    {
+      "sequence_number": 4,
+      "name": "AREA_MILL_1",
+      "type": "SurfaceContour",
+      "tool_name": "UGT0205_001",
+      "toolpath_time_min": 7.482275926192829,
+      "toolpath_cutting_time_min": 7.481851627218268,
+      "toolpath_non_cutting_time_min": 0.000424298974560422,
+      "toolpath_length_mm": 1874.7058965501813,
+      "toolpath_cutting_length_mm": 1870.4629068045667,
+      "volume_mm3": 14120390.819351839,
+      "volume_removed_mm3": 14774.7479
+    },
+    {
+      "sequence_number": 5,
+      "name": "MILL_SLOT",
+      "type": "VolumeBased25DMillingOperation",
+      "tool_name": "NXT0201_008",
+      "toolpath_time_min": 209.8753405848156,
+      "toolpath_cutting_time_min": 209.7534618976382,
+      "toolpath_non_cutting_time_min": 0.12187868717740002,
+      "toolpath_length_mm": 85764.51746843602,
+      "toolpath_cutting_length_mm": 84545.73059666275,
+      "volume_mm3": 13713449.926972447,
+      "volume_removed_mm3": 406940.8924
+    },
+    {
+      "sequence_number": 6,
+      "name": "MILL_RECTANGULAR_SLOT",
+      "type": "VolumeBased25DMillingOperation",
+      "tool_name": "UGT0201_094",
+      "toolpath_time_min": 11.827766587701358,
+      "toolpath_cutting_time_min": 11.804869419518367,
+      "toolpath_non_cutting_time_min": 0.02289716818299148,
+      "toolpath_length_mm": 6089.406391589087,
+      "toolpath_cutting_length_mm": 5860.43470975918,
+      "volume_mm3": 13407923.787740177,
+      "volume_removed_mm3": 305526.1392
+    },
+    {
+      "sequence_number": 7,
+      "name": "MILL_BLIND_HOLE_FROM_SOLID_MATERIAL",
+      "type": "CylinderMilling",
+      "tool_name": "NXT0201_011",
+      "toolpath_time_min": 1.0512480160161177,
+      "toolpath_cutting_time_min": 1.0375480160161177,
+      "toolpath_non_cutting_time_min": 0.013700000000000045,
+      "toolpath_length_mm": 396.3870040040292,
+      "toolpath_cutting_length_mm": 259.3870040040295,
+      "volume_mm3": 13397018.386987465,
+      "volume_removed_mm3": 10905.4008
+    }
+  ]
+}

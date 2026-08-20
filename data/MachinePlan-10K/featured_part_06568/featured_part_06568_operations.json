@@ -1,0 +1,115 @@
+{
+  "machining_summary": {
+    "total_cutting_time_min": 33.3593,
+    "total_non_cutting_time_min": 1.5114,
+    "total_toolpath_time_min": 34.8707,
+    "tool_changes": 6,
+    "num_operations": 8
+  },
+  "operations": [
+    {
+      "sequence_number": 0,
+      "name": "SPOT_DRILL",
+      "type": "HoleDrilling",
+      "tool_name": "NXT0321_9005460120000",
+      "toolpath_time_min": 0.03718079688213389,
+      "toolpath_cutting_time_min": 0.028200796882133887,
+      "toolpath_non_cutting_time_min": 0.008980000000000002,
+      "toolpath_length_mm": 96.85019922053348,
+      "toolpath_cutting_length_mm": 7.050199220533472,
+      "volume_mm3": 14273169.121746583,
+      "volume_removed_mm3": 4171.4316
+    },
+    {
+      "sequence_number": 1,
+      "name": "SPOT_DRILL_1",
+      "type": "HoleDrilling",
+      "tool_name": "NXT0321_9005460120000",
+      "toolpath_time_min": 0.029600796882134,
+      "toolpath_cutting_time_min": 0.028200796882134,
+      "toolpath_non_cutting_time_min": 0.0013999999999999985,
+      "toolpath_length_mm": 21.0501992205335,
+      "toolpath_cutting_length_mm": 7.0501992205335,
+      "volume_mm3": 14273167.803855283,
+      "volume_removed_mm3": 1.3179
+    },
+    {
+      "sequence_number": 2,
+      "name": "DRILL_BLIND_HOLE_INTO_CENTER",
+      "type": "HoleDrilling",
+      "tool_name": "UGT0301_198",
+      "toolpath_time_min": 0.0,
+      "toolpath_cutting_time_min": 0.0,
+      "toolpath_non_cutting_time_min": 0.0,
+      "toolpath_length_mm": 0.0,
+      "toolpath_cutting_length_mm": 0.0,
+      "volume_mm3": 14273167.803855283,
+      "volume_removed_mm3": 0.0
+    },
+    {
+      "sequence_number": 3,
+      "name": "DRILL_TO_ENLARGE_BLIND_HOLE",
+      "type": "HoleDrilling",
+      "tool_name": "UGT0301_373",
+      "toolpath_time_min": 0.02118,
+      "toolpath_cutting_time_min": 0.012,
+      "toolpath_non_cutting_time_min": 0.00918,
+      "toolpath_length_mm": 97.80000000000001,
+      "toolpath_cutting_length_mm": 6.0,
+      "volume_mm3": 14272959.455086095,
+      "volume_removed_mm3": 208.3488
+    },
+    {
+      "sequence_number": 4,
+      "name": "DRILL_BLIND_HOLE_INTO_CENTER_1",
+      "type": "HoleDrilling",
+      "tool_name": "UGT0301_198",
+      "toolpath_time_min": 0.14759999999999998,
+      "toolpath_cutting_time_min": 0.146,
+      "toolpath_non_cutting_time_min": 0.0015999999999999903,
+      "toolpath_length_mm": 89.00000000000006,
+      "toolpath_cutting_length_mm": 73.0,
+      "volume_mm3": 14271363.286988733,
+      "volume_removed_mm3": 1596.1681
+    },
+    {
+      "sequence_number": 5,
+      "name": "DRILL_TO_ENLARGE_BLIND_HOLE_1",
+      "type": "HoleDrilling",
+      "tool_name": "UGT0301_373",
+      "toolpath_time_min": 0.14759999999999998,
+      "toolpath_cutting_time_min": 0.14600000000000002,
+      "toolpath_non_cutting_time_min": 0.0015999999999999626,
+      "toolpath_length_mm": 89.00000000000006,
+      "toolpath_cutting_length_mm": 73.0,
+      "volume_mm3": 14269077.027079696,
+      "volume_removed_mm3": 2286.2599
+    },
+    {
+      "sequence_number": 6,
+      "name": "AREA_MILL",
+      "type": "SurfaceContour",
+      "tool_name": "UGT0205_001",
+      "toolpath_time_min": 8.656808253885334,
+      "toolpath_cutting_time_min": 8.655831091317536,
+      "toolpath_non_cutting_time_min": 0.0009771625677981177,
+      "toolpath_length_mm": 2173.7293985073543,
+      "toolpath_cutting_length_mm": 2163.95777282938,
+      "volume_mm3": 14261973.515850903,
+      "volume_removed_mm3": 7103.5112
+    },
+    {
+      "sequence_number": 7,
+      "name": "MILL_CORNER_NOTCH_RECTANGULAR",
+      "type": "VolumeBased25DMillingOperation",
+      "tool_name": "NXT0201_011",
+      "toolpath_time_min": 25.830694626831033,
+      "toolpath_cutting_time_min": 24.343017351710138,
+      "toolpath_non_cutting_time_min": 1.4876772751208946,
+      "toolpath_length_mm": 26502.28142706419,
+      "toolpath_cutting_length_mm": 11625.508675855057,
+      "volume_mm3": 14014409.23227401,
+      "volume_removed_mm3": 247564.2836
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "machining_summary": {
+    "total_cutting_time_min": 22.4896,
+    "total_non_cutting_time_min": 0.0289,
+    "total_toolpath_time_min": 22.5185,
+    "tool_changes": 2,
+    "num_operations": 3
+  },
+  "operations": [
+    {
+      "sequence_number": 0,
+      "name": "AREA_MILL",
+      "type": "SurfaceContour",
+      "tool_name": "UGT0205_001",
+      "toolpath_time_min": 21.727068221503355,
+      "toolpath_cutting_time_min": 21.710261487684356,
+      "toolpath_non_cutting_time_min": 0.01680673381899922,
+      "toolpath_length_mm": 5595.632710111128,
+      "toolpath_cutting_length_mm": 5427.565371921104,
+      "volume_mm3": 9019448.368348159,
+      "volume_removed_mm3": 56956.0949
+    },
+    {
+      "sequence_number": 1,
+      "name": "MILL_BLIND_HOLE_FROM_SOLID_MATERIAL",
+      "type": "CylinderMilling",
+      "tool_name": "UGT0201_133",
+      "toolpath_time_min": 0.6118008338970873,
+      "toolpath_cutting_time_min": 0.6013008338970874,
+      "toolpath_non_cutting_time_min": 0.010499999999999843,
+      "toolpath_length_mm": 255.32520847427168,
+      "toolpath_cutting_length_mm": 150.32520847427165,
+      "volume_mm3": 9008810.417841865,
+      "volume_removed_mm3": 10637.9505
+    },
+    {
+      "sequence_number": 2,
+      "name": "BORE_BLIND_HOLE",
+      "type": "HoleDrilling",
+      "tool_name": "UGT0332_075",
+      "toolpath_time_min": 0.1796,
+      "toolpath_cutting_time_min": 0.17800000000000002,
+      "toolpath_non_cutting_time_min": 0.0015999999999999903,
+      "toolpath_length_mm": 105.00000000000001,
+      "toolpath_cutting_length_mm": 89.00000000000001,
+      "volume_mm3": 9008810.417841865,
+      "volume_removed_mm3": 0.0
+    }
+  ]
+}

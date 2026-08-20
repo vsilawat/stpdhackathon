@@ -1,0 +1,115 @@
+{
+  "machining_summary": {
+    "total_cutting_time_min": 178.9871,
+    "total_non_cutting_time_min": 1.7482,
+    "total_toolpath_time_min": 180.7353,
+    "tool_changes": 6,
+    "num_operations": 8
+  },
+  "operations": [
+    {
+      "sequence_number": 0,
+      "name": "SPOT_DRILL",
+      "type": "HoleDrilling",
+      "tool_name": "NXT0321_9005460120000",
+      "toolpath_time_min": 0.03718079688213389,
+      "toolpath_cutting_time_min": 0.028200796882133887,
+      "toolpath_non_cutting_time_min": 0.008980000000000002,
+      "toolpath_length_mm": 96.85019922053351,
+      "toolpath_cutting_length_mm": 7.050199220533472,
+      "volume_mm3": 25744671.159763042,
+      "volume_removed_mm3": 4166.0155
+    },
+    {
+      "sequence_number": 1,
+      "name": "DRILL_BLIND_HOLE_INTO_CENTER",
+      "type": "HoleDrilling",
+      "tool_name": "UGT0301_198",
+      "toolpath_time_min": 0.0,
+      "toolpath_cutting_time_min": 0.0,
+      "toolpath_non_cutting_time_min": 0.0,
+      "toolpath_length_mm": 0.0,
+      "toolpath_cutting_length_mm": 0.0,
+      "volume_mm3": 25744671.159763042,
+      "volume_removed_mm3": 0.0
+    },
+    {
+      "sequence_number": 2,
+      "name": "DRILL_TO_ENLARGE_BLIND_HOLE",
+      "type": "HoleDrilling",
+      "tool_name": "UGT0301_373",
+      "toolpath_time_min": 0.021179999999999956,
+      "toolpath_cutting_time_min": 0.011999999999999943,
+      "toolpath_non_cutting_time_min": 0.009180000000000013,
+      "toolpath_length_mm": 97.80000000000007,
+      "toolpath_cutting_length_mm": 5.999999999999972,
+      "volume_mm3": 25744461.88802566,
+      "volume_removed_mm3": 209.2717
+    },
+    {
+      "sequence_number": 3,
+      "name": "AREA_MILL",
+      "type": "SurfaceContour",
+      "tool_name": "UGT0205_001",
+      "toolpath_time_min": 18.968018014480776,
+      "toolpath_cutting_time_min": 18.96590370973383,
+      "toolpath_non_cutting_time_min": 0.002114304746946516,
+      "toolpath_length_mm": 4762.6189749029345,
+      "toolpath_cutting_length_mm": 4741.475927433456,
+      "volume_mm3": 25702212.4583346,
+      "volume_removed_mm3": 42249.4297
+    },
+    {
+      "sequence_number": 4,
+      "name": "AREA_MILL_1",
+      "type": "SurfaceContour",
+      "tool_name": "UGT0205_001",
+      "toolpath_time_min": 10.902321047995654,
+      "toolpath_cutting_time_min": 10.90090530361795,
+      "toolpath_non_cutting_time_min": 0.0014157443777040868,
+      "toolpath_length_mm": 2739.383769681519,
+      "toolpath_cutting_length_mm": 2725.2263259044826,
+      "volume_mm3": 25686947.298006058,
+      "volume_removed_mm3": 15265.1603
+    },
+    {
+      "sequence_number": 5,
+      "name": "MILL_CORNER_NOTCH_RECTANGULAR",
+      "type": "VolumeBased25DMillingOperation",
+      "tool_name": "NXT0201_012",
+      "toolpath_time_min": 30.160154916031885,
+      "toolpath_cutting_time_min": 28.588188809373708,
+      "toolpath_non_cutting_time_min": 1.5719661066581772,
+      "toolpath_length_mm": 29473.755471268265,
+      "toolpath_cutting_length_mm": 13754.094404686852,
+      "volume_mm3": 25144124.280251104,
+      "volume_removed_mm3": 542823.0178
+    },
+    {
+      "sequence_number": 6,
+      "name": "MILL_RECTANGULAR_POCKET",
+      "type": "VolumeBased25DMillingOperation",
+      "tool_name": "NXT0201_011",
+      "toolpath_time_min": 82.19244679457663,
+      "toolpath_cutting_time_min": 82.10636426102823,
+      "toolpath_non_cutting_time_min": 0.08608253354839235,
+      "toolpath_length_mm": 41616.88909178394,
+      "toolpath_cutting_length_mm": 40756.06375630007,
+      "volume_mm3": 24073311.591374356,
+      "volume_removed_mm3": 1070812.6889
+    },
+    {
+      "sequence_number": 7,
+      "name": "MILL_SLOT",
+      "type": "VolumeBased25DMillingOperation",
+      "tool_name": "NXT0201_012",
+      "toolpath_time_min": 38.45402815527045,
+      "toolpath_cutting_time_min": 38.38557567188954,
+      "toolpath_non_cutting_time_min": 0.06845248338090926,
+      "toolpath_length_mm": 16062.312596707055,
+      "toolpath_cutting_length_mm": 15377.787762897959,
+      "volume_mm3": 23569166.95543852,
+      "volume_removed_mm3": 504144.6359
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "machining_summary": {
+    "total_cutting_time_min": 88.3198,
+    "total_non_cutting_time_min": 0.04,
+    "total_toolpath_time_min": 88.3597,
+    "tool_changes": 3,
+    "num_operations": 4
+  },
+  "operations": [
+    {
+      "sequence_number": 0,
+      "name": "SPOT_DRILL",
+      "type": "HoleDrilling",
+      "tool_name": "NXT0321_9005460120000",
+      "toolpath_time_min": 0.0,
+      "toolpath_cutting_time_min": 0.0,
+      "toolpath_non_cutting_time_min": 0.0,
+      "toolpath_length_mm": 0.0,
+      "toolpath_cutting_length_mm": 0.0,
+      "volume_mm3": 13880583.431047497,
+      "volume_removed_mm3": 0.9888
+    },
+    {
+      "sequence_number": 1,
+      "name": "DRILL_BLIND_HOLE_INTO_CENTER",
+      "type": "HoleDrilling",
+      "tool_name": "UGT0301_178",
+      "toolpath_time_min": 0.0,
+      "toolpath_cutting_time_min": 0.0,
+      "toolpath_non_cutting_time_min": 0.0,
+      "toolpath_length_mm": 0.0,
+      "toolpath_cutting_length_mm": 0.0,
+      "volume_mm3": 13880583.431047497,
+      "volume_removed_mm3": 0.0
+    },
+    {
+      "sequence_number": 2,
+      "name": "AREA_MILL",
+      "type": "SurfaceContour",
+      "tool_name": "UGT0205_001",
+      "toolpath_time_min": 26.82577465709292,
+      "toolpath_cutting_time_min": 26.82182477074558,
+      "toolpath_non_cutting_time_min": 0.003949886347342613,
+      "toolpath_length_mm": 6744.955056159829,
+      "toolpath_cutting_length_mm": 6705.4561926864035,
+      "volume_mm3": 13790492.210869148,
+      "volume_removed_mm3": 90091.2202
+    },
+    {
+      "sequence_number": 3,
+      "name": "MILL_RECTANGULAR_POCKET",
+      "type": "VolumeBased25DMillingOperation",
+      "tool_name": "UGT0201_089",
+      "toolpath_time_min": 61.53397219754069,
+      "toolpath_cutting_time_min": 61.4979644346549,
+      "toolpath_non_cutting_time_min": 0.0360077628857951,
+      "toolpath_length_mm": 30941.761891233553,
+      "toolpath_cutting_length_mm": 30581.684262375566,
+      "volume_mm3": 13548156.736026518,
+      "volume_removed_mm3": 242335.4748
+    }
+  ]
+}

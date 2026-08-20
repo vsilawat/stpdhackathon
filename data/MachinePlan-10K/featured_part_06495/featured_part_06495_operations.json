@@ -1,0 +1,115 @@
+{
+  "machining_summary": {
+    "total_cutting_time_min": 80.9523,
+    "total_non_cutting_time_min": 0.5672,
+    "total_toolpath_time_min": 81.5195,
+    "tool_changes": 6,
+    "num_operations": 8
+  },
+  "operations": [
+    {
+      "sequence_number": 0,
+      "name": "SPOT_DRILL",
+      "type": "HoleDrilling",
+      "tool_name": "NXT0321_9005460120000",
+      "toolpath_time_min": 0.0389368677099112,
+      "toolpath_cutting_time_min": 0.029956867709911194,
+      "toolpath_non_cutting_time_min": 0.008980000000000005,
+      "toolpath_length_mm": 97.28921692747781,
+      "toolpath_cutting_length_mm": 7.489216927477798,
+      "volume_mm3": 15142303.365832748,
+      "volume_removed_mm3": 4202.6707
+    },
+    {
+      "sequence_number": 1,
+      "name": "DRILL_BLIND_HOLE_INTO_CENTER",
+      "type": "HoleDrilling",
+      "tool_name": "NXT0301_128",
+      "toolpath_time_min": 0.0,
+      "toolpath_cutting_time_min": 0.0,
+      "toolpath_non_cutting_time_min": 0.0,
+      "toolpath_length_mm": 0.0,
+      "toolpath_cutting_length_mm": 0.0,
+      "volume_mm3": 15142303.365832748,
+      "volume_removed_mm3": 0.0
+    },
+    {
+      "sequence_number": 2,
+      "name": "INDEXABLE_INSERT_DRILL_BLIND_HOLE_FROM_SOLID",
+      "type": "HoleDrilling",
+      "tool_name": "NXT0302_007",
+      "toolpath_time_min": 0.3303999999999999,
+      "toolpath_cutting_time_min": 0.32879999999999987,
+      "toolpath_non_cutting_time_min": 0.0016000000000000458,
+      "toolpath_length_mm": 180.39999999999995,
+      "toolpath_cutting_length_mm": 164.39999999999995,
+      "volume_mm3": 15121976.2189901,
+      "volume_removed_mm3": 20327.1468
+    },
+    {
+      "sequence_number": 3,
+      "name": "MILL_ROUGH_BLIND_HOLE_CONTOUR",
+      "type": "CylinderMilling",
+      "tool_name": "UGT0201_129",
+      "toolpath_time_min": 0.12312284473537241,
+      "toolpath_cutting_time_min": 0.1133428447353724,
+      "toolpath_non_cutting_time_min": 0.009780000000000011,
+      "toolpath_length_mm": 126.1357111838431,
+      "toolpath_cutting_length_mm": 28.335711183843102,
+      "volume_mm3": 15119957.437530676,
+      "volume_removed_mm3": 2018.7815
+    },
+    {
+      "sequence_number": 4,
+      "name": "AREA_MILL",
+      "type": "SurfaceContour",
+      "tool_name": "UGT0205_001",
+      "toolpath_time_min": 25.615371537571367,
+      "toolpath_cutting_time_min": 25.61182291867998,
+      "toolpath_non_cutting_time_min": 0.003548618891386468,
+      "toolpath_length_mm": 6438.441918583896,
+      "toolpath_cutting_length_mm": 6402.955729669996,
+      "volume_mm3": 15023315.257976977,
+      "volume_removed_mm3": 96642.1796
+    },
+    {
+      "sequence_number": 5,
+      "name": "AREA_MILL_1",
+      "type": "SurfaceContour",
+      "tool_name": "UGT0205_001",
+      "toolpath_time_min": 6.816852611470278,
+      "toolpath_cutting_time_min": 6.805008213667095,
+      "toolpath_non_cutting_time_min": 0.011844397803183249,
+      "toolpath_length_mm": 1819.6960314485955,
+      "toolpath_cutting_length_mm": 1701.2520534167718,
+      "volume_mm3": 15017554.998726107,
+      "volume_removed_mm3": 5760.2593
+    },
+    {
+      "sequence_number": 6,
+      "name": "MILL_CORNER_NOTCH_RECTANGULAR",
+      "type": "VolumeBased25DMillingOperation",
+      "tool_name": "UGT0201_094",
+      "toolpath_time_min": 7.782661550226629,
+      "toolpath_cutting_time_min": 7.284014128964731,
+      "toolpath_non_cutting_time_min": 0.49864742126189743,
+      "toolpath_length_mm": 8388.481277101379,
+      "toolpath_cutting_length_mm": 3402.007064482372,
+      "volume_mm3": 14840232.590805309,
+      "volume_removed_mm3": 177322.4079
+    },
+    {
+      "sequence_number": 7,
+      "name": "MILL_RECTANGULAR_POCKET",
+      "type": "VolumeBased25DMillingOperation",
+      "tool_name": "UGT0201_086",
+      "toolpath_time_min": 40.812179921238496,
+      "toolpath_cutting_time_min": 40.77939577791877,
+      "toolpath_non_cutting_time_min": 0.03278414331972357,
+      "toolpath_length_mm": 20547.917945352452,
+      "toolpath_cutting_length_mm": 20220.076512155196,
+      "volume_mm3": 14716505.073223693,
+      "volume_removed_mm3": 123727.5176
+    }
+  ]
+}
