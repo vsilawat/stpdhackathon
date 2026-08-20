@@ -77,7 +77,8 @@ split — ≈94% of tools within the 2% diameter tolerance on holdout when the s
 
 ## 5. Toolpaths — Hard track
 
-We reverse-engineered the .ptp grammar from the training programs and re-emit it generatively:
+We characterised the post-processor's .ptp grammar from the training programs and re-emit it
+generatively:
 N-numbers step by 2, `T00 M6 / G54` preamble, `G43 Z(top+10)` clearance, canned cycles
 `G81/G73/G85 G98 … F250.` with mined parameters:
 

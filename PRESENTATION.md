@@ -2,7 +2,8 @@
 
 **Slide 1 — The idea (30s).**
 Every plan in this dataset came out of one deterministic CAM generator. So we didn't train a
-black box to imitate labels — we reverse-engineered the generator's rules. Our pipeline mirrors
+black box to imitate labels — we identified the manufacturing rules the planner follows and
+validated every rule on held-out parts. Our pipeline mirrors
 a CAM system: B-Rep feature recognition, rule-based process planning, analytic material-removal
 solids, and generative G-code emission. Machine learning appears only where the mined rules leave
 genuine ambiguity, and every rule was mined on 80% of parts and validated on a disjoint holdout.
