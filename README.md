@@ -31,13 +31,9 @@ test_submission/     generated output for the 30 held-out test parts (the graded
 tests/               pytest suite for the recognizer
 old/                 first-attempt standard-library baseline, kept for provenance only
 METHODS.md           how every rule was mined and validated
-PRESENTATION.md      3-minute Round 2 script
-SUMMARY_FOR_TEAM.md  plain-English overview
 ```
 
-Organizer materials: [Kickoff](Hackathon_Kickoff_Problem1.pptx) ·
-[Tutorial](Tutorial_Hackathon_Problem1.pptx) · [Rubrics](Rubrics.pdf) ·
-[Dataset description](Dataset_Description.pdf) · dataset DOI:
+Dataset DOI (canonical source, includes the organizer documentation):
 https://doi.org/10.5281/zenodo.21653081
 
 ## Quick start
