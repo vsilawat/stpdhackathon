@@ -8,8 +8,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-DATA = Path("data/MachinePlan-10K")
-OUT = Path("submission")
+DATA = Path(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--data=")), "data/MachinePlan-10K"))
+OUT = Path(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--out=")), "submission"))
 
 def do_part(part_id: str) -> str:
     from machineplan import brep, features, ipw, mesh, ptp
