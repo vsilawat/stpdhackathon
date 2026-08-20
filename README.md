@@ -16,8 +16,8 @@ organizers' `validate_submission.py` with zero errors.
 |---|---|---|
 | Easy | 20 | mean normalized Levenshtein **0.098**, set-F1 **0.955**, exact sequence 70.2% |
 | Medium | 35 | mean IPW IoU **0.996** |
-| Hard: tools | 20 | positional tool type 84.9%, diameter within 2%: 76.8% |
-| Hard: toolpath | 25 | mined post-processor grammar; estimated swept-volume IoU **0.80** on a 200-part sample |
+| Hard: tools | 20 | positional tool type 84.9%, diameter within 2%: 78.1% |
+| Hard: toolpath | 25 | mined post-processor grammar; estimated swept-volume IoU **0.83** on a 200-part sample |
 
 ```bash
 .venv/bin/python scripts/generate_submission.py   # writes submission/{easy,medium,hard_tools,hard_ptp}

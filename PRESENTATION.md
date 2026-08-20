@@ -15,7 +15,7 @@ with length-to-diameter over 5 get the gun-drill sequence; over 15 mm switches t
 drills. Those recovered rules alone explain 82.5% of chains; a small random forest resolves the
 residual ambiguity — like insert-catalog grid membership — for 96.3% exact chains on holdout.
 Mining op indices also exposed the generator's plan skeleton: a twist-drill block and a mill block
-in one of two orders — the one real binary in the data, which a forest predicts at 91.5% — with
+in one of two orders — the one real binary in the data, which an ensemble predicts at 93.2% — with
 insert-blind chains leading only mill-first plans. Sequence F1 is 0.955, mean edit distance 0.10,
 and 70% of parts match the ground-truth sequence exactly.
 
@@ -33,7 +33,7 @@ over those discrete grids put ~94% of tools within the 2% tolerance. For toolpat
 post-processor grammar itself: retract planes are mouth-plus-2, blind cycles end exactly at the
 detected floor, and every through cycle protrudes by tip-height-plus-1.5 mm — a constant we found
 across the whole corpus. Gun drilling reproduces the mined manual block template, dwell for dwell,
-and our swept-volume proxy scores the emitted paths at 0.80 mean IoU against ground truth.
+and our swept-volume proxy scores the emitted paths at 0.83 mean IoU against ground truth.
 
 **Slide 5 — Why this wins (15s).**
 One deterministic pipeline generates all four tracks for all 10,000 parts in six minutes, passes

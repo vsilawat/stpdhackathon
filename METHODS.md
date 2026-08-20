@@ -34,8 +34,11 @@ chains) and a **mill block** (chamfer area-mills, then pocket mills) in one of t
 only genuine binary in the data. Indexable-insert *blind* chains lead the whole plan when the mill
 block comes first, but stay interleaved at their natural chain position when the twist block leads.
 Hole-milling ops glue to the end of whichever block comes first (100% when drilling leads), and
-boring follows its hole's mill. Two random forests over 23 part-level features decide the residual
-choices: block order (**91.5%** holdout) and hole-mill placement (**81.2%** vs 67.6% base rate).
+boring follows its hole's mill. Two soft-voting ensembles (random forest + gradient boosting)
+over 54 part-level features — including whether hole mouths sit on milled pocket floors — decide
+the residual choices: block order (**93.2%** holdout) and hole-mill placement (**88.7%** vs 67.6%
+base rate). A majority vote over the ground-truth op-category multiset itself only reaches 93.7%,
+so the classifier operates at the ceiling of composition-level signal.
 The template itself — not the classifier — carries the structure.
 Holdout: **mean lev 0.098, set-F1 0.955, exact-sequence 70.2%**.
 
@@ -65,7 +68,7 @@ end mills are 2× the corner fillet radius; intermediate drills come from per-op
 classifiers over a **discrete tool-size grid** (gun drills: integers + 8.3 mm; spades: 0.5 mm
 grid; pilots: 0.1 mm grid), refined by a chain-keyed diameter lookup mined from the training
 split — ≈94% of tools within the 2% diameter tolerance on holdout when the sequence matches
-(positional: type 84.9%, diameter 76.8%).
+(positional: type 84.9%, diameter 78.1%).
 
 ## 5. Toolpaths — Hard track
 
@@ -86,7 +89,7 @@ N-numbers step by 2, `T00 M6 / G54` preamble, `G43 Z(top+10)` clearance, canned 
   strategy.
 
 A swept-volume IoU proxy (1 mm heightfield columns, arc-aware G-code parser) estimates
-**mean per-op IoU 0.80** against ground-truth toolpaths on a 200-part holdout sample.
+**mean per-op IoU 0.83** against ground-truth toolpaths on a 200-part holdout sample.
 
 ## 6. Positioning against the literature
 
