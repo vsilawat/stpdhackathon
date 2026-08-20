@@ -12,6 +12,7 @@ OUT = Path("submission/hard_ptp")
 
 def do_part(part_id: str) -> str:
     import json
+
     from machineplan import brep, features, ptp
     from machineplan import plan as planmod
     try:

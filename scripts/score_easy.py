@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from machineplan import plan as planmod
 
+
 def levenshtein(a: list, b: list) -> int:
     if len(a) < len(b): a, b = b, a
     prev = list(range(len(b) + 1))

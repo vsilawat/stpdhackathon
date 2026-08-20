@@ -6,6 +6,11 @@ B-Rep feature recognition → process-plan synthesis → analytic in-process-wor
 G-code emission. Learned models are used only where mined rules leave genuine ambiguity, and every
 rule below was mined from the training split and validated on a disjoint holdout (every 5th part).
 
+All four tracks are decoded from a single predicted process plan: the operation sequence (Easy),
+IPW solids (Medium), tool list and toolpaths (Hard) are different projections of one `plan()`
+output, so cross-track consistency holds by construction — the tools always match the sequence,
+and every IPW state is the exact boolean consequence of the operations that precede it.
+
 ## 1. Feature recognition (`src/machineplan/features.py`)
 
 Pure B-Rep analysis with OpenCascade (cadquery-ocp): cylindrical faces are clustered into holes

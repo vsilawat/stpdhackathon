@@ -1,13 +1,16 @@
 .venv/
 __pycache__/
 *.pyc
+*.bak
+.DS_Store
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
 *.egg-info/
 
-# dataset (5.2 GB zip, ~35 GB extracted)
-data/
-old/
+# 4.9 GB -- over GitHub limits; extracted contents are committed under data/
+data/MachinePlan-10K.zip
+# trained models over GitHub's 100 MB file limit -- shipped as release assets
 derived/chain_tree.pkl
 derived/chain_tree12.pkl
 derived/tool_dia_models.pkl

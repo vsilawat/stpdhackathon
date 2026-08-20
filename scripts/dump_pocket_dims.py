@@ -12,6 +12,7 @@ def do_part(args) -> str | None:
     pid, dia = args
     try:
         from shapely.geometry import Polygon
+
         from machineplan import brep, features
         part = brep.load(f"data/MachinePlan-10K/{pid}/{pid}.stp")
         found = features.extract(part)

@@ -24,7 +24,7 @@ def num(v: float) -> str:
 class Prog:
     def __init__(self, partname: str, opname: str, tool: str):
         self.n = 10
-        self.out = [f"(DATE            : 14.07.2026 , 17:20                      )",
+        self.out = ["(DATE            : 14.07.2026 , 17:20                      )",
                     f"(PARTNAME        : {partname.upper() + '.PRT':<41})"]
         self.line("G17 G21 G94 G90")
         self.sep()
@@ -164,7 +164,9 @@ def emit_slot(p: Prog, op: Op, part: Part, zc: float, dt: float):
     r = dt / 2
     vr, vl = max(W / 2 - r, 0.0), min(-W / 2 + r, 0.0)
     un, uf = -L / 2, L / 2
+
     def P(u, v): return ctr + u * uhat + v * vhat
+
     def arc(cu, cv, a0, a1):
         return [P(cu + r * np.cos(np.radians(a)), cv + r * np.sin(np.radians(a)))
                 for a in np.linspace(a0, a1, 7)]

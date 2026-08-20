@@ -3,7 +3,11 @@
 Groups rows by (part, geometry_group) -- one machined feature -- and characterizes the op chain,
 tool sequence and diameters for each feature family (holes, pockets, chamfers, spot drills, boring).
 Writes derived/chains.csv and prints the analysis used to build the decision rule set."""
-import csv, json, math, re, statistics as st
+import csv
+import json
+import math
+import re
+import statistics as st
 from collections import Counter, defaultdict
 
 OPDETAILS, SEQUENCES = 'derived/opdetails.csv', 'derived/sequences.jsonl'

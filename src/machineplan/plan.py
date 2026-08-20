@@ -76,6 +76,7 @@ def pocket_ops(found: Features) -> list[Op]:
 def hole_chain(h: Hole) -> list[Op]:
     """Mined chain rules (derived/chains.csv)."""
     d, ld = h.diameter, (h.depth / h.diameter if h.diameter else 0.0)
+
     def op(name, dia=None): return Op(name, feature=h, tool_diameter=dia)
     spot = op("SPOT_DRILL", 12.0)
     if h.through:

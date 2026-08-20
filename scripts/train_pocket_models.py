@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from machineplan.features import Pocket
 from machineplan.tooling import pocket_dia_feats, pocket_dia_X
 
+
 def pocket_of(r: dict) -> Pocket:
     return Pocket(floor_z=0.0, depth=float(r["depth"]), area=float(r["area"]), kind=r["kind"],
                   open_sides=int(float(r["open_sides"])), fillet_radius=float(r["fillet_radius"]) or None,

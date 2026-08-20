@@ -10,8 +10,9 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from machineplan import plan as planmod
 from train_order import labels
+
+from machineplan import plan as planmod
 
 FEATS: dict | None = None
 

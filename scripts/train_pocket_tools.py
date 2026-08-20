@@ -3,7 +3,6 @@ from __future__ import annotations
 import csv
 import json
 import pickle
-from collections import defaultdict
 
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier

@@ -9,11 +9,11 @@ GT = Path("data/MachinePlan-10K-gt")
 SUB = Path("submission/hard_ptp")
 CYCLE = re.compile(r"G(81|73|85) G98 Z(-?[\d.]+) F[\d.]+(?: Q([\d.]+))? R(-?[\d.]+)")
 XY = re.compile(r"G0 G90 X(-?[\d.]+) Y(-?[\d.]+)")
-GUNZ = re.compile(r"^N\d+ Z(-?[\d.]+) F125\.$", re.M)
+GUNZ = re.compile(r"^N\d+ Z(-?[\d.]+) F125\.$", re.MULTILINE)
 
 def parse(path: Path):
     t = path.read_text()
-    m = re.search(r"^\((\w+) *, *TOOL", t, re.M)
+    m = re.search(r"^\((\w+) *, *TOOL", t, re.MULTILINE)
     op = m.group(1) if m else "?"
     xy = XY.search(t)
     c = CYCLE.search(t)
@@ -38,6 +38,7 @@ def main(n_sample: int = 50) -> int:
         for f in sd.glob("*.ptp"):
             op, xy, cyc = parse(f)
             if xy and cyc: my_ops[op].append((xy, cyc))
+
         def basename(o): return o.rsplit("_", 1)[0] if o.split("_")[-1].isdigit() else o
         my_by_base = defaultdict(list)
         for op, items in my_ops.items(): my_by_base[basename(op)].extend(items)

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import csv
 import json
-import sys
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
+
 
 def vocab_type(sub: str, typ: str) -> str:
     s = sub.lower()

@@ -8,8 +8,9 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from machineplan.tooling import pocket_dia_X
 from train_pocket_models import pocket_of
+
+from machineplan.tooling import pocket_dia_X
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 

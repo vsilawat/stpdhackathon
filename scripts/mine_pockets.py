@@ -37,6 +37,7 @@ def max_inscribed(poly) -> float:
 
 def do_part(part_id: str) -> list | str:
     from shapely.geometry import Point, Polygon
+
     from machineplan import brep, features
     ops = gt_ops().get(part_id) or []
     if not ops: return []

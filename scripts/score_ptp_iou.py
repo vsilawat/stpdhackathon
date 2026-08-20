@@ -12,9 +12,9 @@ import numpy as np
 GT = Path("data/MachinePlan-10K-gt")
 SUB = Path("submission/hard_ptp")
 CYCLE = re.compile(r"G(?:81|73|85) G98 Z(-?[\d.]+) F[\d.]+(?: Q[\d.]+)? R(-?[\d.]+)")
-ZMOVE = re.compile(r"^N\d+ Z(-?[\d.]+) F[\d.]+", re.M)
+ZMOVE = re.compile(r"^N\d+ Z(-?[\d.]+) F[\d.]+", re.MULTILINE)
 XY0 = re.compile(r"G0 G90 X(-?[\d.]+) Y(-?[\d.]+)")
-OPRE = re.compile(r"^\((\w+) *, *TOOL", re.M)
+OPRE = re.compile(r"^\((\w+) *, *TOOL", re.MULTILINE)
 TOK = re.compile(r"([XYZ])(-?[\d.]+)")
 RARC = re.compile(r" R(-?[\d.]+)")
 

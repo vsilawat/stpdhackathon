@@ -9,7 +9,11 @@ from multiprocessing import Pool
 from pathlib import Path
 
 import numpy as np
-from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier, VotingClassifier
+from sklearn.ensemble import (
+    HistGradientBoostingClassifier,
+    RandomForestClassifier,
+    VotingClassifier,
+)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 

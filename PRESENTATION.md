@@ -6,6 +6,8 @@ black box to imitate labels — we reverse-engineered the generator's rules. Our
 a CAM system: B-Rep feature recognition, rule-based process planning, analytic material-removal
 solids, and generative G-code emission. Machine learning appears only where the mined rules leave
 genuine ambiguity, and every rule was mined on 80% of parts and validated on a disjoint holdout.
+All four tracks decode from one predicted plan, so sequence, solids, tools and toolpaths are
+consistent by construction.
 
 **Slide 2 — Features and sequence (45s).**
 We recognize holes, pockets and chamfers directly from the STEP B-Rep with OpenCascade — no mesh

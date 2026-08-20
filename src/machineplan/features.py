@@ -131,7 +131,9 @@ def find_holes(part: Part, top_z: float, bottom_z: float) -> list[Hole]:
 
 def _floor_dims(part: Part, face_id: FaceId) -> tuple[float, float, float, float]:
     import math as _m
+
     from shapely.geometry import Polygon
+
     from . import brep
     try:
         pts = [(x, y) for x, y, _ in brep.outline(part, face_id)]
